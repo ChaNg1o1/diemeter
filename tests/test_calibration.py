@@ -10,6 +10,7 @@ import pytest
 from diemeter.calibration import (
     calibrate_from_line,
     calibrate_from_rect,
+    chi_squared_consistency,
     compute_homography,
     reprojection_error,
     update_calibration_lines,
@@ -145,3 +146,34 @@ class TestUpdateCalibrationRect:
         assert cal.is_calibrated
         assert cal.pixels_per_unit == pytest.approx(10.0)
         assert warped is None
+
+
+class TestChiSquaredConsistency:
+    def test_consistent_lines(self):
+        """Lines with similar ppu should pass."""
+        lines = [
+            CalibrationLine(Vertex(0, 0), Vertex(100, 0), 10.0, Unit.MILLIMETER),
+            CalibrationLine(Vertex(0, 0), Vertex(0, 101), 10.1, Unit.MILLIMETER),
+        ]
+        chi2, p_value, is_consistent = chi_squared_consistency(lines)
+        assert chi2 >= 0
+        assert 0 <= p_value <= 1
+        assert is_consistent is True
+
+    def test_inconsistent_lines(self):
+        """Lines with very different ppu should fail."""
+        lines = [
+            CalibrationLine(Vertex(0, 0), Vertex(100, 0), 10.0, Unit.MILLIMETER),
+            CalibrationLine(Vertex(0, 0), Vertex(100, 0), 20.0, Unit.MILLIMETER),
+        ]
+        chi2, p_value, is_consistent = chi_squared_consistency(lines)
+        assert is_consistent is False
+
+    def test_single_line(self):
+        """Single line should always be consistent."""
+        lines = [
+            CalibrationLine(Vertex(0, 0), Vertex(100, 0), 10.0, Unit.MILLIMETER),
+        ]
+        chi2, p_value, is_consistent = chi_squared_consistency(lines)
+        assert chi2 == 0.0
+        assert is_consistent is True

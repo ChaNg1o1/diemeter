@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
+from scipy.stats import chi2 as chi2_dist
 
 from .model import (
     Calibration,
@@ -64,6 +65,50 @@ def weighted_average_ppu(lines: List[CalibrationLine]) -> Tuple[float, float]:
         ppu_std = 0.0
 
     return ppu_mean, ppu_std
+
+
+def chi_squared_consistency(
+    lines: List[CalibrationLine],
+    sigma_per_pixel: float = 0.5,
+    confidence_level: float = 0.95,
+) -> Tuple[float, float, bool]:
+    """Test whether multiple calibration lines give consistent ppu values.
+
+    Uses chi-squared test: each line's ppu is compared against the weighted
+    mean, with uncertainty estimated from endpoint localization error.
+
+    Parameters
+    ----------
+    lines : list of CalibrationLine
+        At least 1 calibration line.
+    sigma_per_pixel : float
+        Assumed endpoint localization uncertainty in pixels.
+    confidence_level : float
+        Threshold for consistency (default 0.95).
+
+    Returns
+    -------
+    (chi2_value, p_value, is_consistent) : tuple
+    """
+    if len(lines) <= 1:
+        return 0.0, 1.0, True
+
+    ppus = np.array([line.pixels_per_unit for line in lines])
+    # Uncertainty of each ppu: sigma_ppu ≈ ppu * sqrt(2) * sigma / pixel_length
+    sigmas = np.array([
+        line.pixels_per_unit * np.sqrt(2) * sigma_per_pixel / line.pixel_length
+        for line in lines
+    ])
+
+    weights = 1.0 / (sigmas ** 2)
+    ppu_mean = np.sum(weights * ppus) / np.sum(weights)
+
+    chi2_value = float(np.sum(((ppus - ppu_mean) / sigmas) ** 2))
+    dof = len(lines) - 1
+    p_value = float(1.0 - chi2_dist.cdf(chi2_value, dof))
+    is_consistent = p_value > (1.0 - confidence_level)
+
+    return chi2_value, p_value, is_consistent
 
 
 def update_calibration_lines(calibration: Calibration) -> Calibration:
