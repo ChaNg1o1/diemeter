@@ -159,6 +159,12 @@ class MeasurementResult:
     area_uncertainty: float
     unit: Unit
     n_vertices: int
+    # Uncertainty decomposition
+    area_uncertainty_vertex: float = 0.0
+    area_uncertainty_ppu: float = 0.0
+    # Perimeter
+    perimeter_physical: float = 0.0
+    perimeter_uncertainty: float = 0.0
 
 
 @dataclass
