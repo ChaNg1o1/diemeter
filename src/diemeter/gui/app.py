@@ -585,9 +585,13 @@ class MeasurementApp(QMainWindow):
             if poly.closed and self.session.calibration.is_calibrated:
                 for r in self.session.results:
                     if r.polygon_label == poly.label:
+                        rel_err = (
+                            (r.area_uncertainty / r.area_physical * 100)
+                            if r.area_physical > 0 else 0.0
+                        )
                         area_text = (
                             f"{r.area_physical:.4g} {r.unit.value}\u00b2"
-                            f" \u00b1 {r.area_uncertainty:.2g}"
+                            f" \u00b1{rel_err:.1f}%"
                         )
                         break
             active_vi = None
