@@ -23,6 +23,10 @@ def results_to_csv(results: List[MeasurementResult]) -> str:
         "area_pixels",
         "area_physical",
         "area_uncertainty",
+        "area_uncertainty_vertex",
+        "area_uncertainty_ppu",
+        "perimeter_physical",
+        "perimeter_uncertainty",
         "unit",
         "n_vertices",
     ])
@@ -32,6 +36,10 @@ def results_to_csv(results: List[MeasurementResult]) -> str:
             f"{r.area_pixels:.4f}",
             f"{r.area_physical:.6f}",
             f"{r.area_uncertainty:.6f}",
+            f"{r.area_uncertainty_vertex:.6f}",
+            f"{r.area_uncertainty_ppu:.6f}",
+            f"{r.perimeter_physical:.6f}",
+            f"{r.perimeter_uncertainty:.6f}",
             r.unit.value,
             r.n_vertices,
         ])
