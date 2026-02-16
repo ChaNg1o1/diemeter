@@ -338,7 +338,8 @@ class MeasurementApp(QMainWindow):
         self._current_polygon = None
 
         if self.session.calibration.is_calibrated:
-            result = measure_polygon(poly, self.session.calibration)
+            mg = self._get_max_grad()
+            result = measure_polygon(poly, self.session.calibration, max_grad=mg)
             self.session.results.append(result)
 
         self.state.switch_to(Mode.VIEW)
@@ -742,14 +743,21 @@ class MeasurementApp(QMainWindow):
 
     # -- Internal helpers --
 
+    def _get_max_grad(self) -> float:
+        """Get max gradient from edge detector, or default."""
+        if self._edge_detector is not None and self._edge_detector.max_grad > 0:
+            return self._edge_detector.max_grad
+        return 255.0
+
     def _remeasure_all(self) -> None:
         """Re-measure all polygons with current calibration."""
         self.session.results.clear()
         if not self.session.calibration.is_calibrated:
             return
+        mg = self._get_max_grad()
         for poly in self.session.polygons:
             if poly.closed and poly.n_vertices >= 3:
-                result = measure_polygon(poly, self.session.calibration)
+                result = measure_polygon(poly, self.session.calibration, max_grad=mg)
                 self.session.results.append(result)
 
     def _remeasure_polygon(self, idx: int) -> None:
@@ -757,7 +765,8 @@ class MeasurementApp(QMainWindow):
         if not self.session.calibration.is_calibrated:
             return
         poly = self.session.polygons[idx]
-        result = measure_polygon(poly, self.session.calibration)
+        mg = self._get_max_grad()
+        result = measure_polygon(poly, self.session.calibration, max_grad=mg)
         for i, r in enumerate(self.session.results):
             if r.polygon_label == poly.label:
                 self.session.results[i] = result
