@@ -50,3 +50,53 @@ class TestMeasurementResultExtended:
         assert r.area_uncertainty_ppu == 0.0
         assert r.perimeter_physical == 0.0
         assert r.perimeter_uncertainty == 0.0
+
+
+class TestUnitFromStr:
+    def test_basic_units(self):
+        assert unit_from_str("mm") == Unit.MILLIMETER
+        assert unit_from_str("um") == Unit.MICROMETER
+        assert unit_from_str("\u03bcm") == Unit.MICROMETER
+        assert unit_from_str("cm") == Unit.CENTIMETER
+        assert unit_from_str("m") == Unit.METER
+        assert unit_from_str("in") == Unit.INCH
+        assert unit_from_str("mil") == Unit.MIL
+        assert unit_from_str("px") == Unit.PIXEL
+
+    def test_case_insensitive(self):
+        assert unit_from_str("MM") == Unit.MILLIMETER
+        assert unit_from_str("Mm") == Unit.MILLIMETER
+
+    def test_with_whitespace(self):
+        assert unit_from_str("  mm  ") == Unit.MILLIMETER
+
+    def test_unknown_raises(self):
+        with pytest.raises(ValueError, match="Unknown unit"):
+            unit_from_str("furlongs")
+
+
+class TestConvertLength:
+    def test_identity(self):
+        assert convert_length(5.0, Unit.MILLIMETER, Unit.MILLIMETER) == 5.0
+
+    def test_mm_to_cm(self):
+        assert convert_length(10.0, Unit.MILLIMETER, Unit.CENTIMETER) == pytest.approx(1.0)
+
+    def test_inch_to_mm(self):
+        assert convert_length(1.0, Unit.INCH, Unit.MILLIMETER) == pytest.approx(25.4)
+
+    def test_pixel_raises(self):
+        with pytest.raises(ValueError, match="pixels"):
+            convert_length(1.0, Unit.PIXEL, Unit.MILLIMETER)
+
+
+class TestConvertArea:
+    def test_identity(self):
+        assert convert_area(5.0, Unit.MILLIMETER, Unit.MILLIMETER) == 5.0
+
+    def test_mm2_to_cm2(self):
+        assert convert_area(100.0, Unit.MILLIMETER, Unit.CENTIMETER) == pytest.approx(1.0)
+
+    def test_pixel_raises(self):
+        with pytest.raises(ValueError, match="pixels"):
+            convert_area(1.0, Unit.PIXEL, Unit.MILLIMETER)
