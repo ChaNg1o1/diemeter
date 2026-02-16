@@ -54,7 +54,7 @@ def devernay_subpixel(
     grad_mag: np.ndarray,
     grad_dir: np.ndarray,
 ) -> List[Tuple[float, float, float]]:
-    """Apply Devernay sub-pixel refinement to Canny edge points.
+    """Apply Devernay sub-pixel refinement to Canny edge points (vectorized).
 
     For each edge pixel, fit a parabola along the gradient direction
     to find the sub-pixel position of the edge.
@@ -74,45 +74,43 @@ def devernay_subpixel(
         Sub-pixel edge points with confidence (gradient magnitude at edge).
     """
     h, w = edges.shape
-    edge_points = []
-
     ys, xs = np.nonzero(edges)
+    n = len(xs)
+    if n == 0:
+        return []
 
-    for y, x in zip(ys, xs):
-        dx = np.cos(grad_dir[y, x])
-        dy = np.sin(grad_dir[y, x])
+    xs_f = xs.astype(np.float64)
+    ys_f = ys.astype(np.float64)
 
-        # Sample gradient magnitude at (x-dx, y-dy), (x, y), (x+dx, y+dy)
-        # using bilinear interpolation
-        m_center = grad_mag[y, x]
+    dx = np.cos(grad_dir[ys, xs])
+    dy = np.sin(grad_dir[ys, xs])
+    m_center = grad_mag[ys, xs].astype(np.float64)
 
-        xm, ym = x - dx, y - dy
-        xp, yp = x + dx, y + dy
+    # Minus and plus sample positions
+    xm, ym = xs_f - dx, ys_f - dy
+    xp, yp = xs_f + dx, ys_f + dy
 
-        m_minus = _bilinear_sample(grad_mag, xm, ym)
-        m_plus = _bilinear_sample(grad_mag, xp, yp)
+    # Vectorized bilinear sampling
+    m_minus = _bilinear_sample_batch(grad_mag, xm, ym)
+    m_plus = _bilinear_sample_batch(grad_mag, xp, yp)
 
-        if m_minus is None or m_plus is None:
-            edge_points.append((float(x), float(y), m_center))
-            continue
+    # Parabolic interpolation
+    denom = 2.0 * (m_minus - 2.0 * m_center + m_plus)
 
-        # Parabolic interpolation
-        denom = 2.0 * (m_minus - 2.0 * m_center + m_plus)
-        if abs(denom) < 1e-10:
-            edge_points.append((float(x), float(y), m_center))
-            continue
+    # Where interpolation is valid
+    valid = (m_minus >= 0) & (m_plus >= 0) & (np.abs(denom) >= 1e-10)
 
-        t = (m_minus - m_plus) / denom
-        # Clamp t to [-0.5, 0.5] for stability
-        t = max(-0.5, min(0.5, t))
+    t = np.zeros(n)
+    t[valid] = (m_minus[valid] - m_plus[valid]) / denom[valid]
+    t = np.clip(t, -0.5, 0.5)
 
-        sub_x = x + t * dx
-        sub_y = y + t * dy
-        confidence = m_center + 0.5 * t * (m_minus - m_plus)
+    sub_x = xs_f + t * dx
+    sub_y = ys_f + t * dy
+    confidence = m_center + 0.5 * t * (m_minus - m_plus)
+    # For invalid points, use original coordinates
+    confidence = np.where(valid, confidence, m_center)
 
-        edge_points.append((float(sub_x), float(sub_y), float(confidence)))
-
-    return edge_points
+    return list(zip(sub_x.tolist(), sub_y.tolist(), confidence.tolist()))
 
 
 def _bilinear_sample(
@@ -136,6 +134,39 @@ def _bilinear_sample(
         + img[y1, x1] * fx * fy
     )
     return float(val)
+
+
+def _bilinear_sample_batch(
+    img: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+) -> np.ndarray:
+    """Vectorized bilinear interpolation. Returns -1.0 for out-of-bounds."""
+    h, w = img.shape[:2]
+    x0 = np.floor(x).astype(np.intp)
+    y0 = np.floor(y).astype(np.intp)
+    x1 = x0 + 1
+    y1 = y0 + 1
+
+    # Bounds check
+    valid = (x0 >= 0) & (y0 >= 0) & (x1 < w) & (y1 < h)
+    result = np.full_like(x, -1.0, dtype=np.float64)
+
+    if not np.any(valid):
+        return result
+
+    x0v, y0v = x0[valid], y0[valid]
+    x1v, y1v = x1[valid], y1[valid]
+    fx = x[valid] - x0v
+    fy = y[valid] - y0v
+
+    result[valid] = (
+        img[y0v, x0v] * (1 - fx) * (1 - fy)
+        + img[y0v, x1v] * fx * (1 - fy)
+        + img[y1v, x0v] * (1 - fx) * fy
+        + img[y1v, x1v] * fx * fy
+    )
+    return result
 
 
 class EdgeDetector:
