@@ -177,3 +177,16 @@ class TestChiSquaredConsistency:
         chi2, p_value, is_consistent = chi_squared_consistency(lines)
         assert chi2 == 0.0
         assert is_consistent is True
+
+
+class TestRectCalibrationUncertainty:
+    def test_uncertainty_from_corner_localization(self):
+        """Rect calibration uncertainty should be based on corner sigma, not reprojection error."""
+        corners = [(80, 60), (220, 70), (210, 230), (90, 220)]
+        rect = calibrate_from_rect(corners, 10.0, 8.0, Unit.MILLIMETER)
+        cal = Calibration(rect=rect, unit=Unit.MILLIMETER)
+        cal, _ = update_calibration_rect(cal, dst_scale=10.0)
+        # With sigma_corner=0.5 default, uncertainty should be positive but small
+        assert cal.ppu_uncertainty > 0
+        # Should be proportional to corner uncertainty, not zero-ish reprojection error
+        assert cal.ppu_uncertainty > 0.001

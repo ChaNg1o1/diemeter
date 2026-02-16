@@ -281,6 +281,8 @@ def update_calibration_rect(
     calibration: Calibration,
     image: Optional[np.ndarray] = None,
     dst_scale: float = 10.0,
+    sigma_corner: float = 0.5,
+    n_mc_samples: int = 200,
 ) -> Tuple[Calibration, Optional[np.ndarray]]:
     """Perform rectangle-based calibration with optional perspective warp.
 
@@ -292,6 +294,10 @@ def update_calibration_rect(
         If provided, will be warped.
     dst_scale : float
         Pixels per unit in rectified image.
+    sigma_corner : float
+        Corner localization uncertainty in pixels.
+    n_mc_samples : int
+        Number of Monte Carlo samples for ppu uncertainty estimation.
 
     Returns
     -------
@@ -308,12 +314,35 @@ def update_calibration_rect(
     calibration.unit = rect.unit
     calibration.homography = H.flatten().tolist()
 
-    # Compute reprojection error as a quality metric
-    reproj_err = reprojection_error(rect, H, dst_scale)
-    # Use reprojection error to estimate ppu uncertainty
-    # Rough: uncertainty ~ reproj_err / known_length * ppu
-    avg_dim = (rect.known_width + rect.known_height) / 2
-    calibration.ppu_uncertainty = reproj_err / avg_dim if avg_dim > 0 else 0.0
+    # Monte Carlo estimation of ppu uncertainty from corner localization error.
+    # compute_homography returns ppu = dst_scale always (rectified-image ppu),
+    # so we instead estimate effective source-image ppu by averaging the pixel
+    # lengths of the four edges divided by their known physical lengths.
+    rng = np.random.default_rng(0)
+    ppus_mc = []
+    base_corners = np.array([(c.x, c.y) for c in rect.corners], dtype=np.float64)
+    known_edge_lengths = np.array([
+        rect.known_width,   # top:    TL -> TR
+        rect.known_height,  # right:  TR -> BR
+        rect.known_width,   # bottom: BR -> BL
+        rect.known_height,  # left:   BL -> TL
+    ])
+    for _ in range(n_mc_samples):
+        noise = rng.normal(0, sigma_corner, size=(4, 2))
+        noisy = base_corners + noise
+        # Compute pixel edge lengths from the noisy corners
+        edge_pixels = np.array([
+            np.linalg.norm(noisy[(i + 1) % 4] - noisy[i])
+            for i in range(4)
+        ])
+        # Effective ppu for each edge, then average
+        edge_ppus = edge_pixels / known_edge_lengths
+        ppus_mc.append(float(np.mean(edge_ppus)))
+
+    if ppus_mc:
+        calibration.ppu_uncertainty = float(np.std(ppus_mc))
+    else:
+        calibration.ppu_uncertainty = 0.0
 
     warped = None
     if image is not None:
