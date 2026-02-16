@@ -203,3 +203,60 @@ def build_vertex_sigmas(polygon: Polygon, max_grad: float) -> np.ndarray:
         confidence_to_sigma(v.confidence, max_grad, v.snapped)
         for v in polygon.vertices
     ])
+
+
+def perimeter_uncertainty(
+    vertices: List[Tuple[float, float]],
+    sigma_xy: float | np.ndarray = 0.5,
+) -> float:
+    """Compute perimeter uncertainty from vertex position uncertainty.
+
+    For each edge (v_i, v_{i+1}), length L_k = |v_{i+1} - v_i|.
+    Perimeter P = sum(L_k).
+    dL_k/dx_i = -(x_{i+1} - x_i) / L_k,  dL_k/dy_i = -(y_{i+1} - y_i) / L_k
+    dL_k/dx_{i+1} = (x_{i+1} - x_i) / L_k,  etc.
+
+    Parameters
+    ----------
+    vertices : list of (x, y)
+        Closed polygon vertices.
+    sigma_xy : float or np.ndarray
+        Per-vertex position uncertainty (isotropic).
+
+    Returns
+    -------
+    float
+        Standard deviation of perimeter in pixels.
+    """
+    n = len(vertices)
+    if n < 2:
+        return 0.0
+
+    sigma = np.atleast_1d(np.asarray(sigma_xy, dtype=np.float64))
+    if sigma.shape == (1,):
+        sigma = np.broadcast_to(sigma, (n,))
+
+    xs = np.array([v[0] for v in vertices])
+    ys = np.array([v[1] for v in vertices])
+
+    # dP/dx_i and dP/dy_i accumulate contributions from edges (i-1,i) and (i,i+1)
+    dP_dx = np.zeros(n)
+    dP_dy = np.zeros(n)
+
+    for k in range(n):
+        j = (k + 1) % n
+        dx = xs[j] - xs[k]
+        dy = ys[j] - ys[k]
+        length = np.sqrt(dx * dx + dy * dy)
+        if length < 1e-12:
+            continue
+        # Edge k: from vertex k to vertex j
+        # dL_k/dx_k = -dx/L, dL_k/dy_k = -dy/L
+        # dL_k/dx_j = +dx/L, dL_k/dy_j = +dy/L
+        dP_dx[k] += -dx / length
+        dP_dy[k] += -dy / length
+        dP_dx[j] += dx / length
+        dP_dy[j] += dy / length
+
+    variance = np.sum((dP_dx**2 + dP_dy**2) * sigma**2)
+    return float(np.sqrt(variance))

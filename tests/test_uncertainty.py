@@ -174,3 +174,48 @@ class TestBuildVertexSigmas:
         assert sigmas[2] < 1.0
         # Higher confidence → lower sigma
         assert sigmas[1] < sigmas[2]
+
+
+from diemeter.uncertainty import perimeter_uncertainty
+
+
+class TestPerimeterUncertainty:
+    def test_unit_square(self):
+        """Perimeter of unit square with known vertex uncertainty."""
+        verts = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        sigma = perimeter_uncertainty(verts, sigma_xy=0.1)
+        assert sigma > 0.0
+        # Each edge contributes, so total should be non-trivial
+        assert sigma < 1.0  # sanity: small sigma on small polygon
+
+    def test_zero_sigma(self):
+        verts = [(0, 0), (100, 0), (100, 100), (0, 100)]
+        assert perimeter_uncertainty(verts, sigma_xy=0.0) == 0.0
+
+    def test_per_vertex_sigma(self):
+        verts = [(0, 0), (100, 0), (100, 100), (0, 100)]
+        sigmas = np.array([0.1, 0.1, 0.1, 5.0])
+        sigma = perimeter_uncertainty(verts, sigma_xy=sigmas)
+        assert sigma > 0.0
+
+    def test_monte_carlo_cross_validation(self):
+        """Cross-validate perimeter uncertainty with Monte Carlo."""
+        verts = [(0, 0), (100, 0), (100, 50), (0, 50)]
+        sigma_xy = 1.0
+        analytic = perimeter_uncertainty(verts, sigma_xy=sigma_xy)
+
+        rng = np.random.default_rng(42)
+        n_samples = 50000
+        perimeters = []
+        verts_arr = np.array(verts, dtype=np.float64)
+        for _ in range(n_samples):
+            perturbed = verts_arr + rng.normal(0, sigma_xy, verts_arr.shape)
+            n = len(perturbed)
+            perim = sum(
+                np.sqrt((perturbed[(i+1) % n][0] - perturbed[i][0])**2 +
+                        (perturbed[(i+1) % n][1] - perturbed[i][1])**2)
+                for i in range(n)
+            )
+            perimeters.append(perim)
+        mc_std = np.std(perimeters)
+        assert analytic == pytest.approx(mc_std, rel=0.15)
