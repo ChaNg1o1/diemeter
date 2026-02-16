@@ -137,3 +137,72 @@ class TestMeasurePolygon:
         cal = Calibration()
         with pytest.raises(ValueError, match="not been performed"):
             measure_polygon(poly, cal)
+
+
+class TestMeasurePolygonFullUncertainty:
+    def test_uncertainty_decomposition(self):
+        poly = Polygon(
+            vertices=[
+                Vertex(x=0, y=0, snapped=True, confidence=200.0),
+                Vertex(x=100, y=0, snapped=True, confidence=200.0),
+                Vertex(x=100, y=100, snapped=False, confidence=1.0),
+                Vertex(x=0, y=100, snapped=False, confidence=1.0),
+            ],
+            label="test",
+            closed=True,
+        )
+        cal = Calibration(
+            pixels_per_unit=10.0,
+            ppu_uncertainty=0.2,
+            unit=Unit.MILLIMETER,
+        )
+        result = measure_polygon(poly, cal)
+        assert result.area_uncertainty_vertex > 0.0
+        assert result.area_uncertainty_ppu > 0.0
+        # Total should be quadrature combination
+        import math
+        expected_total = math.sqrt(
+            result.area_uncertainty_vertex**2 + result.area_uncertainty_ppu**2
+        )
+        assert result.area_uncertainty == pytest.approx(expected_total, rel=1e-6)
+
+    def test_perimeter_in_result(self):
+        poly = Polygon(
+            vertices=[
+                Vertex(x=0, y=0),
+                Vertex(x=100, y=0),
+                Vertex(x=100, y=100),
+                Vertex(x=0, y=100),
+            ],
+            label="test",
+            closed=True,
+        )
+        cal = Calibration(
+            pixels_per_unit=10.0,
+            unit=Unit.MILLIMETER,
+        )
+        result = measure_polygon(poly, cal)
+        # Perimeter = 400 px / 10 px/mm = 40 mm
+        assert result.perimeter_physical == pytest.approx(40.0)
+
+    def test_max_grad_passed_through(self):
+        """Ensure max_grad parameter affects vertex uncertainty."""
+        poly = Polygon(
+            vertices=[
+                Vertex(x=0, y=0, snapped=True, confidence=100.0),
+                Vertex(x=100, y=0, snapped=True, confidence=100.0),
+                Vertex(x=100, y=100, snapped=True, confidence=100.0),
+                Vertex(x=0, y=100, snapped=True, confidence=100.0),
+            ],
+            label="test",
+            closed=True,
+        )
+        cal = Calibration(
+            pixels_per_unit=10.0,
+            ppu_uncertainty=0.2,
+            unit=Unit.MILLIMETER,
+        )
+        r1 = measure_polygon(poly, cal, max_grad=100.0)
+        r2 = measure_polygon(poly, cal, max_grad=200.0)
+        # Higher max_grad means same confidence is lower relative → higher sigma
+        assert r2.area_uncertainty_vertex > r1.area_uncertainty_vertex
