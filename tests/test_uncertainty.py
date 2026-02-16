@@ -126,3 +126,51 @@ class TestTotalAreaUncertainty:
         )
         with pytest.raises(ValueError):
             total_area_uncertainty(poly, Calibration())
+
+
+from diemeter.uncertainty import confidence_to_sigma, build_vertex_sigmas
+
+
+class TestConfidenceToSigma:
+    def test_manual_click_no_snap(self):
+        """Unsnapped vertex should have sigma = 1.0."""
+        assert confidence_to_sigma(confidence=1.0, max_grad=255.0, snapped=False) == 1.0
+
+    def test_high_confidence_snap(self):
+        """High-confidence snap should approach 0.1."""
+        sigma = confidence_to_sigma(confidence=255.0, max_grad=255.0, snapped=True)
+        assert sigma == pytest.approx(0.1, abs=0.01)
+
+    def test_low_confidence_snap(self):
+        """Low-confidence snap should yield high sigma (close to 1.0)."""
+        sigma = confidence_to_sigma(confidence=25.5, max_grad=255.0, snapped=True)
+        assert 0.8 < sigma < 1.0
+
+    def test_clamp_minimum(self):
+        """Sigma should never go below 0.1."""
+        sigma = confidence_to_sigma(confidence=1000.0, max_grad=100.0, snapped=True)
+        assert sigma >= 0.1
+
+
+class TestBuildVertexSigmas:
+    def test_mixed_vertices(self):
+        """Build sigma array from mix of snapped and unsnapped vertices."""
+        poly = Polygon(
+            vertices=[
+                Vertex(x=0, y=0, snapped=False, confidence=1.0),
+                Vertex(x=100, y=0, snapped=True, confidence=200.0),
+                Vertex(x=100, y=100, snapped=True, confidence=50.0),
+                Vertex(x=0, y=100, snapped=False, confidence=1.0),
+            ],
+            closed=True,
+        )
+        sigmas = build_vertex_sigmas(poly, max_grad=255.0)
+        assert len(sigmas) == 4
+        # Unsnapped vertices have sigma=1.0
+        assert sigmas[0] == 1.0
+        assert sigmas[3] == 1.0
+        # Snapped vertices have sigma < 1.0
+        assert sigmas[1] < 1.0
+        assert sigmas[2] < 1.0
+        # Higher confidence → lower sigma
+        assert sigmas[1] < sigmas[2]

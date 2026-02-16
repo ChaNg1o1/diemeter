@@ -153,3 +153,53 @@ def total_area_uncertainty(
     total = float(np.sqrt(vertex_contrib**2 + ppu_contrib**2))
 
     return total, vertex_contrib, ppu_contrib
+
+
+def confidence_to_sigma(
+    confidence: float,
+    max_grad: float,
+    snapped: bool,
+) -> float:
+    """Map Devernay edge confidence to vertex position uncertainty (sigma in pixels).
+
+    Parameters
+    ----------
+    confidence : float
+        Gradient magnitude at the snapped edge point.
+    max_grad : float
+        Maximum gradient magnitude across all edge points (normalization).
+    snapped : bool
+        Whether this vertex was snapped to an edge.
+
+    Returns
+    -------
+    float
+        Estimated position uncertainty in pixels.
+    """
+    if not snapped:
+        return 1.0
+    if max_grad <= 0:
+        return 0.5
+    ratio = min(confidence / max_grad, 1.0)
+    return max(0.1, 1.0 - 0.9 * ratio)
+
+
+def build_vertex_sigmas(polygon: Polygon, max_grad: float) -> np.ndarray:
+    """Build per-vertex sigma array from polygon vertex metadata.
+
+    Parameters
+    ----------
+    polygon : Polygon
+        Polygon with vertex snap/confidence info.
+    max_grad : float
+        Maximum gradient magnitude for normalization.
+
+    Returns
+    -------
+    np.ndarray
+        Array of shape (n_vertices,) with per-vertex sigma values.
+    """
+    return np.array([
+        confidence_to_sigma(v.confidence, max_grad, v.snapped)
+        for v in polygon.vertices
+    ])
