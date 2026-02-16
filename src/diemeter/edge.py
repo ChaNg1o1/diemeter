@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
+from scipy.spatial import cKDTree
 
 
 def compute_edges(
@@ -186,13 +187,20 @@ class EdgeDetector:
         # Spatial index for fast nearest-neighbor queries
         self._points_array: Optional[np.ndarray] = None
         self._confidences: Optional[np.ndarray] = None
+        self._kdtree: Optional[cKDTree] = None
+        self._max_grad: float = 0.0
 
     @property
     def edges(self) -> np.ndarray:
         return self._edges
 
+    @property
+    def max_grad(self) -> float:
+        """Maximum gradient magnitude across all sub-pixel edge points."""
+        return self._max_grad
+
     def compute_subpixel(self) -> None:
-        """Compute sub-pixel edge points (may be slow for large images)."""
+        """Compute sub-pixel edge points and build spatial index."""
         self._subpixel_points = devernay_subpixel(
             self._edges, self._grad_mag, self._grad_dir
         )
@@ -201,6 +209,8 @@ class EdgeDetector:
             conf = np.array([p[2] for p in self._subpixel_points])
             self._points_array = pts
             self._confidences = conf
+            self._kdtree = cKDTree(pts)
+            self._max_grad = float(conf.max()) if len(conf) > 0 else 0.0
 
     def snap_to_edge(
         self,
@@ -208,7 +218,7 @@ class EdgeDetector:
         y: float,
         radius: float = 15.0,
     ) -> Optional[Tuple[float, float, float]]:
-        """Find nearest sub-pixel edge point within radius.
+        """Find nearest sub-pixel edge point within radius using KD-tree.
 
         Parameters
         ----------
@@ -225,21 +235,16 @@ class EdgeDetector:
         if self._points_array is None:
             self.compute_subpixel()
 
-        if self._points_array is None or len(self._points_array) == 0:
+        if self._kdtree is None or self._points_array is None:
             return None
 
-        # Euclidean distance to all edge points
-        dists = np.sqrt(
-            (self._points_array[:, 0] - x) ** 2
-            + (self._points_array[:, 1] - y) ** 2
-        )
-
-        within = dists <= radius
-        if not np.any(within):
+        # KD-tree ball query
+        indices = self._kdtree.query_ball_point([x, y], radius)
+        if not indices:
             return None
 
-        # Among points within radius, pick the one with highest confidence
-        candidates = np.where(within)[0]
+        # Among candidates, pick highest confidence
+        candidates = np.array(indices)
         best_idx = candidates[np.argmax(self._confidences[candidates])]
 
         pt = self._points_array[best_idx]

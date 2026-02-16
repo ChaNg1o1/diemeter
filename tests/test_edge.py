@@ -92,3 +92,16 @@ class TestEdgeDetector:
     def test_edge_property(self, white_square_100):
         det = EdgeDetector(white_square_100)
         assert det.edges.shape == (200, 200)
+
+
+class TestEdgeDetectorKDTree:
+    def test_snap_uses_kdtree(self, gradient_edge_image):
+        """Verify snap_to_edge returns same result but uses spatial index."""
+        det = EdgeDetector(gradient_edge_image)
+        det.compute_subpixel()
+        # Verify KD-tree was built
+        assert det._kdtree is not None
+        # Snap should still work correctly
+        result = det.snap_to_edge(100.0, 100.0, radius=15.0)
+        assert result is not None
+        assert abs(result[0] - 100.0) < 2.0  # near the edge at x=100
