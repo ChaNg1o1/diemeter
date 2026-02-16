@@ -51,6 +51,7 @@ from .items import (
     SnapMarkerItem,
 )
 from .modes import Mode, ModeState
+from .info_panel import InfoPanel
 from .toolbar import ToolbarManager
 
 
@@ -105,6 +106,10 @@ class MeasurementApp(QMainWindow):
 
         # Toolbar
         self._toolbar_mgr = ToolbarManager(self)
+
+        # Info panel (right dock)
+        self._info_panel = InfoPanel(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._info_panel)
 
         # Status bar
         self._status_bar = QStatusBar(self)
@@ -645,6 +650,12 @@ class MeasurementApp(QMainWindow):
             self.canvas.add_overlay(
                 RoiRectItem(self.state.roi_start, self.state.roi_end)
             )
+
+        # Info panel
+        self._info_panel.refresh(
+            self.session,
+            selected_polygon_idx=self.state.active_polygon_idx,
+        )
 
         # Status bar + toolbar
         self._refresh_status_bar()
