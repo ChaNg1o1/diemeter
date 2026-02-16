@@ -117,6 +117,10 @@ def _result_to_dict(r: MeasurementResult) -> Dict[str, Any]:
         "area_pixels": r.area_pixels,
         "area_physical": r.area_physical,
         "area_uncertainty": r.area_uncertainty,
+        "area_uncertainty_vertex": r.area_uncertainty_vertex,
+        "area_uncertainty_ppu": r.area_uncertainty_ppu,
+        "perimeter_physical": r.perimeter_physical,
+        "perimeter_uncertainty": r.perimeter_uncertainty,
         "unit": r.unit.value,
         "n_vertices": r.n_vertices,
     }
@@ -128,6 +132,10 @@ def _result_from_dict(d: Dict[str, Any]) -> MeasurementResult:
         area_pixels=d["area_pixels"],
         area_physical=d["area_physical"],
         area_uncertainty=d["area_uncertainty"],
+        area_uncertainty_vertex=d.get("area_uncertainty_vertex", 0.0),
+        area_uncertainty_ppu=d.get("area_uncertainty_ppu", 0.0),
+        perimeter_physical=d.get("perimeter_physical", 0.0),
+        perimeter_uncertainty=d.get("perimeter_uncertainty", 0.0),
         unit=Unit(d["unit"]),
         n_vertices=d["n_vertices"],
     )
