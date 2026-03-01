@@ -39,3 +39,11 @@ class TestMain:
         assert ret == 1
         captured = capsys.readouterr()
         assert "not found" in captured.err
+
+    def test_invalid_snap_radius(self, capsys, tmp_path):
+        image = tmp_path / "dummy.png"
+        image.write_bytes(b"x")
+        ret = main([str(image), "--snap-radius", "0"])
+        assert ret == 1
+        captured = capsys.readouterr()
+        assert "snap-radius" in captured.err

@@ -31,6 +31,16 @@ class TestComputeEdges:
         assert edges.shape == (100, 100)
         assert np.count_nonzero(edges) > 0
 
+    def test_invalid_blur_kernel_raises(self):
+        img = np.zeros((20, 20), dtype=np.uint8)
+        with pytest.raises(ValueError, match="positive odd"):
+            compute_edges(img, blur_ksize=2)
+
+    def test_invalid_threshold_order_raises(self):
+        img = np.zeros((20, 20), dtype=np.uint8)
+        with pytest.raises(ValueError, match="low_threshold"):
+            compute_edges(img, low_threshold=200, high_threshold=100)
+
 
 class TestDevernaySubpixel:
     def test_vertical_edge(self, gradient_edge_image):
@@ -92,6 +102,11 @@ class TestEdgeDetector:
     def test_edge_property(self, white_square_100):
         det = EdgeDetector(white_square_100)
         assert det.edges.shape == (200, 200)
+
+    def test_negative_radius_raises(self, white_square_100):
+        det = EdgeDetector(white_square_100, low_threshold=30, high_threshold=100)
+        with pytest.raises(ValueError, match="radius"):
+            det.snap_to_edge(50.0, 50.0, radius=-1.0)
 
 
 class TestEdgeDetectorKDTree:

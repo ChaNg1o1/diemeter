@@ -15,11 +15,24 @@ def autocorrelation_2d(image: np.ndarray) -> np.ndarray:
 
     acorr = ifft2(|fft2(img)|^2), normalized to [0, 1].
     """
-    if len(image.shape) == 3:
-        # Convert to grayscale via luminance
-        gray = np.dot(image[..., :3], [0.114, 0.587, 0.299])
+    if image is None or not isinstance(image, np.ndarray) or image.size == 0:
+        raise ValueError("image must be a non-empty numpy array")
+    if image.ndim not in (2, 3):
+        raise ValueError("image must be 2D grayscale or 3D color array")
+
+    if image.ndim == 3:
+        if image.shape[2] >= 3:
+            # Convert to grayscale via luminance
+            gray = np.dot(image[..., :3], [0.114, 0.587, 0.299])
+        elif image.shape[2] == 1:
+            gray = image[..., 0].astype(np.float64)
+        else:
+            raise ValueError("color image must have at least 1 channel")
     else:
+        # Convert to grayscale via luminance
         gray = image.astype(np.float64)
+    if gray.size == 0:
+        raise ValueError("image must contain at least one pixel")
 
     # Subtract mean to remove DC component
     gray = gray - gray.mean()
@@ -152,8 +165,25 @@ def detect_grid(
     GridResult or None
         Detected grid parameters, or None if no clear pattern found.
     """
+    try:
+        min_pitch = int(min_pitch)
+    except (TypeError, ValueError):
+        raise ValueError("min_pitch must be positive") from None
+    if min_pitch <= 0:
+        raise ValueError("min_pitch must be positive")
+    if image is None or not isinstance(image, np.ndarray) or image.size == 0:
+        raise ValueError("image must be a non-empty numpy array")
+
     if roi is not None:
-        rx, ry, rw, rh = roi
+        try:
+            rx, ry, rw, rh = [int(v) for v in roi]
+        except (TypeError, ValueError):
+            raise ValueError("roi must be a 4-tuple of integers (x, y, w, h)") from None
+        if rw <= 0 or rh <= 0:
+            raise ValueError("roi width and height must be positive")
+        h, w = image.shape[:2]
+        if rx < 0 or ry < 0 or (rx + rw) > w or (ry + rh) > h:
+            raise ValueError("roi must lie within image bounds")
         crop = image[ry : ry + rh, rx : rx + rw]
     else:
         crop = image

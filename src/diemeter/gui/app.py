@@ -14,14 +14,21 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QInputDialog,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QStatusBar,
 )
 
 from ..calibration import (
+    DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+    DEFAULT_LINE_HUBER_K,
+    DEFAULT_LINE_IRLS_MAX_ITERS,
+    DEFAULT_LINE_IRLS_TOL,
     calibrate_from_line,
+    calibrate_from_pad_pitch,
     calibrate_from_rect,
+    chi_squared_consistency,
     update_calibration_lines,
     update_calibration_rect,
 )
@@ -31,10 +38,13 @@ from ..grid import detect_grid
 from ..measurement import measure_polygon, polygon_area_pixels
 from ..model import (
     Calibration,
+    GridResult,
     Polygon,
     Session,
     Unit,
     Vertex,
+    convert_area,
+    convert_length,
     unit_from_str,
 )
 from ..session import load_session, save_session
@@ -53,6 +63,10 @@ from .items import (
 from .modes import Mode, ModeState
 from .info_panel import InfoPanel
 from .toolbar import ToolbarManager
+
+_LINE_CAL_CONFIDENCE_LEVEL = 0.95
+_LINE_CAL_WARN_REL_UNC_PERCENT = 1.0
+_LINE_CAL_MIN_RECOMMENDED_PIXELS = 180.0
 
 
 class MeasurementApp(QMainWindow):
@@ -82,6 +96,12 @@ class MeasurementApp(QMainWindow):
             self.session = load_session(session_path)
         else:
             self.session = Session(image_path=image_path)
+        if self.session.display_unit == Unit.PIXEL:
+            self.session.display_unit = (
+                self.session.calibration.unit
+                if self.session.calibration.unit != Unit.PIXEL
+                else Unit.MILLIMETER
+            )
 
         # Interactive state
         self.state = ModeState()
@@ -93,6 +113,8 @@ class MeasurementApp(QMainWindow):
 
         # Undo stack: list of (action_type, data) tuples
         self._undo_stack: List[Tuple[str, object]] = []
+        self._last_line_input = "10 mm"
+        self._last_rect_input = "10 x 8 mm"
 
         # -- UI setup --
         self.setWindowTitle(tr("window.title"))
@@ -129,6 +151,9 @@ class MeasurementApp(QMainWindow):
         # Keyboard shortcuts
         self._setup_shortcuts()
 
+        # Ensure loaded/new results are aligned to the selected display unit.
+        self._remeasure_all()
+
         # Initial draw + fit
         self.redraw()
         self.canvas.fit_image()
@@ -141,8 +166,11 @@ class MeasurementApp(QMainWindow):
             "P": lambda: self.switch_mode(Mode.POLYGON_DRAW),
             "E": lambda: self.switch_mode(Mode.POLYGON_EDIT),
             "G": lambda: self.switch_mode(Mode.GRID_DETECT),
+            "B": lambda: self.switch_mode(Mode.CALIBRATE_PAD_PITCH),
             "Escape": lambda: self.switch_mode(Mode.VIEW),
             "S": lambda: self.toggle_edge_snap(),
+            "[": lambda: self.adjust_snap_radius(-1),
+            "]": lambda: self.adjust_snap_radius(+1),
             "D": lambda: self.delete_nearest_vertex(),
             "I": lambda: self.insert_vertex_on_edge(),
             "Return": self._on_enter_key,
@@ -193,10 +221,10 @@ class MeasurementApp(QMainWindow):
 
         self.redraw()
 
-    def maybe_snap(self, x: float, y: float) -> Tuple[float, float]:
+    def maybe_snap(self, x: float, y: float) -> Tuple[float, float, bool, float]:
         """Snap coordinates to nearest edge if edge snap is enabled."""
         if not self.session.edge_snap_enabled:
-            return x, y
+            return x, y, False, 1.0
         if self._edge_detector is None:
             self._edge_detector = EdgeDetector(self.original_image)
             self._edge_detector.compute_subpixel()
@@ -204,15 +232,55 @@ class MeasurementApp(QMainWindow):
             x, y, radius=float(self.session.edge_snap_radius)
         )
         if result is not None:
-            return result[0], result[1]
-        return x, y
+            return result[0], result[1], True, result[2]
+        return x, y, False, 1.0
 
     def toggle_edge_snap(self) -> None:
         """Toggle edge snap on/off."""
-        self.session.edge_snap_enabled = not self.session.edge_snap_enabled
-        if self.session.edge_snap_enabled and self._edge_detector is None:
+        self.set_edge_snap_enabled(not self.session.edge_snap_enabled)
+
+    def set_edge_snap_enabled(self, enabled: bool) -> None:
+        """Enable/disable edge snap and refresh the UI."""
+        enabled = bool(enabled)
+        if enabled and self._edge_detector is None:
             self._edge_detector = EdgeDetector(self.original_image)
             self._edge_detector.compute_subpixel()
+        if self.session.edge_snap_enabled == enabled:
+            return
+        self.session.edge_snap_enabled = enabled
+        self.redraw()
+
+    def set_snap_radius(self, radius: int) -> None:
+        """Set edge snap query radius (pixels)."""
+        radius = int(radius)
+        if radius <= 0:
+            raise ValueError("snap radius must be positive")
+        if self.session.edge_snap_radius == radius:
+            return
+        self.session.edge_snap_radius = radius
+        self._toolbar_mgr.set_snap_radius(radius)
+        self._toolbar_mgr.update_highlight(
+            self.state.mode,
+            self.session.edge_snap_enabled,
+            radius,
+        )
+        self._refresh_status_bar()
+        if self.session.edge_snap_enabled:
+            self.redraw()
+
+    def adjust_snap_radius(self, delta: int) -> None:
+        """Nudge snap radius by +/- delta via keyboard shortcuts."""
+        self.set_snap_radius(max(1, self.session.edge_snap_radius + int(delta)))
+
+    def set_display_unit(self, unit: Unit) -> None:
+        """Set display/output unit for measured physical quantities."""
+        if unit == Unit.PIXEL:
+            return
+        if self.session.display_unit == unit:
+            return
+        self.session.display_unit = unit
+        self._toolbar_mgr.set_display_unit(unit)
+        self._remeasure_all()
         self.redraw()
 
     # -- Calibration (synchronous modal dialogs) --
@@ -223,21 +291,12 @@ class MeasurementApp(QMainWindow):
         if len(pts) != 2:
             return
 
-        text, ok = QInputDialog.getText(
-            self,
-            tr("dialog.calibrate_line_title"),
-            tr("dialog.enter_distance"),
-        )
-        if not ok or not text.strip():
+        parsed = self._prompt_line_calibration_input()
+        if parsed is None:
             self.state.points = []
             self.redraw()
             return
-
-        length, unit = self._parse_length_input(text.strip())
-        if length is None:
-            self.state.points = []
-            self.redraw()
-            return
+        length, unit = parsed
 
         line = calibrate_from_line(pts[0], pts[1], length, unit)
         self._undo_stack.append(
@@ -245,7 +304,15 @@ class MeasurementApp(QMainWindow):
         )
         self.session.calibration.lines.append(line)
         self.session.calibration.unit = unit
-        update_calibration_lines(self.session.calibration)
+        update_calibration_lines(
+            self.session.calibration,
+            sigma_per_pixel=DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+            robust=True,
+            huber_k=DEFAULT_LINE_HUBER_K,
+            max_irls_iters=DEFAULT_LINE_IRLS_MAX_ITERS,
+            irls_tol=DEFAULT_LINE_IRLS_TOL,
+        )
+        self._show_line_calibration_quality_warning()
 
         self.state.switch_to(Mode.VIEW)
         self._remeasure_all()
@@ -257,21 +324,12 @@ class MeasurementApp(QMainWindow):
         if len(pts) != 4:
             return
 
-        text, ok = QInputDialog.getText(
-            self,
-            tr("dialog.calibrate_rect_title"),
-            tr("dialog.enter_rect_dim"),
-        )
-        if not ok or not text.strip():
+        parsed = self._prompt_rect_calibration_input()
+        if parsed is None:
             self.state.points = []
             self.redraw()
             return
-
-        w, h, unit = self._parse_rect_input(text.strip())
-        if w is None:
-            self.state.points = []
-            self.redraw()
-            return
+        w, h, unit = parsed
 
         rect = calibrate_from_rect(pts, w, h, unit)
         self.session.calibration.rect = rect
@@ -308,13 +366,23 @@ class MeasurementApp(QMainWindow):
 
     # -- Polygon drawing --
 
-    def add_polygon_vertex(self, x: float, y: float) -> None:
+    def add_polygon_vertex(
+        self,
+        x: float,
+        y: float,
+        snapped: bool,
+        confidence: float,
+    ) -> None:
         """Add a vertex to the current polygon being drawn."""
         if self._current_polygon is None:
             return
-        snapped = self.session.edge_snap_enabled
         self._current_polygon.vertices.append(
-            Vertex(x=x, y=y, snapped=snapped)
+            Vertex(
+                x=x,
+                y=y,
+                snapped=bool(snapped),
+                confidence=float(confidence) if snapped else 1.0,
+            )
         )
         self.redraw()
 
@@ -339,9 +407,15 @@ class MeasurementApp(QMainWindow):
 
         if self.session.calibration.is_calibrated:
             mg = self._get_max_grad()
-            result = measure_polygon(poly, self.session.calibration, max_grad=mg)
+            result = measure_polygon(
+                poly,
+                self.session.calibration,
+                target_unit=self.session.display_unit,
+                max_grad=mg,
+            )
             self.session.results.append(result)
 
+        self.state.active_polygon_idx = len(self.session.polygons) - 1
         self.state.switch_to(Mode.VIEW)
         self.redraw()
 
@@ -372,9 +446,11 @@ class MeasurementApp(QMainWindow):
             return
         poly = self.session.polygons[idx]
         if vi < poly.n_vertices:
-            x, y = self.maybe_snap(x, y)
-            poly.vertices[vi].x = x
-            poly.vertices[vi].y = y
+            sx, sy, snapped, confidence = self.maybe_snap(x, y)
+            poly.vertices[vi].x = sx
+            poly.vertices[vi].y = sy
+            poly.vertices[vi].snapped = snapped
+            poly.vertices[vi].confidence = float(confidence) if snapped else 1.0
             self._remeasure_polygon(idx)
             self.redraw()
 
@@ -494,6 +570,124 @@ class MeasurementApp(QMainWindow):
         self.state.switch_to(Mode.VIEW)
         self.redraw()
 
+    # -- Pad pitch calibration --
+
+    def run_pad_pitch_calibrate(self) -> None:
+        """Run FFT pad pitch detection on the selected ROI and calibrate."""
+        start = self.state.roi_start
+        end = self.state.roi_end
+        if start is None or end is None:
+            return
+
+        x0 = int(min(start[0], end[0]))
+        y0 = int(min(start[1], end[1]))
+        x1 = int(max(start[0], end[0]))
+        y1 = int(max(start[1], end[1]))
+        roi = (x0, y0, x1 - x0, y1 - y0)
+
+        if roi[2] < 20 or roi[3] < 20:
+            return
+
+        img = (
+            self._warped_image
+            if self._warped_image is not None
+            else self.original_image
+        )
+
+        # Detect pitch (without known length yet — we just need pixels).
+        from ..grid import detect_grid
+
+        grid_result = detect_grid(img, roi=roi)
+        if grid_result is None:
+            QMessageBox.information(
+                self,
+                tr("dialog.calibrate_pad_pitch_title"),
+                tr("dialog.pad_pitch_failed"),
+            )
+            self.state.switch_to(Mode.VIEW)
+            self.redraw()
+            return
+
+        pitch_px = float(np.hypot(grid_result.pitch_x, grid_result.pitch_y))
+
+        # Prompt for known pitch.
+        parsed = self._prompt_pad_pitch_input(pitch_px, grid_result.confidence)
+        if parsed is None:
+            self.state.switch_to(Mode.VIEW)
+            self.redraw()
+            return
+        known_pitch, unit = parsed
+
+        result = calibrate_from_pad_pitch(
+            img, roi=roi, known_pitch=known_pitch, unit=unit,
+        )
+        if result is None:
+            QMessageBox.information(
+                self,
+                tr("dialog.calibrate_pad_pitch_title"),
+                tr("dialog.pad_pitch_failed"),
+            )
+            self.state.switch_to(Mode.VIEW)
+            self.redraw()
+            return
+
+        line, grid_res = result
+        self._undo_stack.append(
+            ("add_cal_line", len(self.session.calibration.lines))
+        )
+        self.session.calibration.lines.append(line)
+        self.session.calibration.unit = unit
+        update_calibration_lines(
+            self.session.calibration,
+            sigma_per_pixel=DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+            robust=True,
+            huber_k=DEFAULT_LINE_HUBER_K,
+            max_irls_iters=DEFAULT_LINE_IRLS_MAX_ITERS,
+            irls_tol=DEFAULT_LINE_IRLS_TOL,
+        )
+        self._show_line_calibration_quality_warning()
+
+        # Store grid result for overlay.
+        self.session.grid_results.append(grid_res)
+
+        self.state.switch_to(Mode.VIEW)
+        self._remeasure_all()
+        self.redraw()
+
+    def _prompt_pad_pitch_input(
+        self,
+        pitch_px: float,
+        confidence: float,
+    ) -> Optional[Tuple[float, Unit]]:
+        """Prompt until valid pad pitch input is provided or cancelled."""
+        default_text = "80 um"
+        while True:
+            text, ok = QInputDialog.getText(
+                self,
+                tr("dialog.calibrate_pad_pitch_title"),
+                tr(
+                    "dialog.enter_pad_pitch",
+                    pitch_px=pitch_px,
+                    conf=confidence,
+                ),
+                QLineEdit.EchoMode.Normal,
+                default_text,
+            )
+            if not ok:
+                return None
+
+            raw = text.strip()
+            length, unit = self._parse_length_input(raw)
+            if length is not None:
+                return length, unit
+
+            QMessageBox.warning(
+                self,
+                tr("dialog.input_error_title"),
+                tr("dialog.invalid_length"),
+            )
+            default_text = raw
+
     # -- Undo --
 
     def undo(self) -> None:
@@ -516,7 +710,14 @@ class MeasurementApp(QMainWindow):
             if idx < len(self.session.calibration.lines):
                 self.session.calibration.lines.pop(idx)
                 if self.session.calibration.lines:
-                    update_calibration_lines(self.session.calibration)
+                    update_calibration_lines(
+                        self.session.calibration,
+                        sigma_per_pixel=DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+                        robust=True,
+                        huber_k=DEFAULT_LINE_HUBER_K,
+                        max_irls_iters=DEFAULT_LINE_IRLS_MAX_ITERS,
+                        irls_tol=DEFAULT_LINE_IRLS_TOL,
+                    )
                 else:
                     self.session.calibration.pixels_per_unit = 0.0
                     self.session.calibration.ppu_uncertainty = 0.0
@@ -545,7 +746,7 @@ class MeasurementApp(QMainWindow):
             export_results(
                 path,
                 self.session.results,
-                self.session.grid_results or None,
+                self._grid_results_for_current_unit() or None,
             )
             self._status_bar.showMessage(f"Exported to {path}", 3000)
         except Exception as e:
@@ -646,8 +847,8 @@ class MeasurementApp(QMainWindow):
                 Mode.CALIBRATE_LINE,
                 Mode.CALIBRATE_RECT,
             ):
-                sx, sy = self.maybe_snap(cursor[0], cursor[1])
-                if (sx, sy) != (cursor[0], cursor[1]):
+                sx, sy, snapped, _ = self.maybe_snap(cursor[0], cursor[1])
+                if snapped:
                     self.canvas.add_overlay(SnapMarkerItem((sx, sy)))
 
         # ROI rectangle
@@ -660,12 +861,15 @@ class MeasurementApp(QMainWindow):
         self._info_panel.refresh(
             self.session,
             selected_polygon_idx=self.state.active_polygon_idx,
+            display_unit=self.session.display_unit,
         )
 
         # Status bar + toolbar
         self._refresh_status_bar()
         self._toolbar_mgr.update_highlight(
-            self.state.mode, self.session.edge_snap_enabled
+            self.state.mode,
+            self.session.edge_snap_enabled,
+            self.session.edge_snap_radius,
         )
 
     # -- i18n --
@@ -688,6 +892,7 @@ class MeasurementApp(QMainWindow):
     ) -> None:
         """Update the status bar text."""
         parts = []
+        display_unit = self.session.display_unit
 
         # Mode + help
         mode_key = f"help.{self.state.mode.value}"
@@ -696,17 +901,29 @@ class MeasurementApp(QMainWindow):
         # Calibration
         cal = self.session.calibration
         if cal.is_calibrated:
+            ppu = cal.pixels_per_unit
+            ppu_unc = cal.ppu_uncertainty
+            ppu_unit = cal.unit
+            if display_unit != cal.unit:
+                try:
+                    # Convert px/(cal unit) -> px/(display unit).
+                    scale = convert_length(1.0, display_unit, cal.unit)
+                    ppu *= scale
+                    ppu_unc *= scale
+                    ppu_unit = display_unit
+                except ValueError:
+                    pass
             parts.append(
-                tr("status.scale", ppu=cal.pixels_per_unit,
-                   unit=cal.unit.value, unc=cal.ppu_uncertainty)
+                tr("status.scale", ppu=ppu, unit=ppu_unit.value, unc=ppu_unc)
             )
         else:
             parts.append(tr("status.not_calibrated"))
 
         # Snap
         parts.append(
-            tr("status.snap_on") if self.session.edge_snap_enabled
-            else tr("status.snap_off")
+            tr("status.snap_on", radius=self.session.edge_snap_radius)
+            if self.session.edge_snap_enabled
+            else tr("status.snap_off", radius=self.session.edge_snap_radius)
         )
 
         # Cursor
@@ -716,8 +933,16 @@ class MeasurementApp(QMainWindow):
             if cal.is_calibrated:
                 px = cx / cal.pixels_per_unit
                 py = cy / cal.pixels_per_unit
+                phys_unit = cal.unit
+                if display_unit != cal.unit:
+                    try:
+                        px = convert_length(px, cal.unit, display_unit)
+                        py = convert_length(py, cal.unit, display_unit)
+                        phys_unit = display_unit
+                    except ValueError:
+                        pass
                 pos += tr("status.cursor_phys",
-                          px=px, py=py, unit=cal.unit.value)
+                          px=px, py=py, unit=phys_unit.value)
             parts.append(pos)
 
         # Current polygon area
@@ -727,12 +952,19 @@ class MeasurementApp(QMainWindow):
             area_str = tr("status.current_area_px", area=area_px)
             if cal.is_calibrated:
                 area_phys = area_px / (cal.pixels_per_unit ** 2)
+                area_unit = cal.unit
+                if display_unit != cal.unit:
+                    try:
+                        area_phys = convert_area(area_phys, cal.unit, display_unit)
+                        area_unit = display_unit
+                    except ValueError:
+                        pass
                 area_str += tr("status.current_area_phys",
-                               area=area_phys, unit=cal.unit.value)
+                               area=area_phys, unit=area_unit.value)
             parts.append(area_str)
 
         # Grid results
-        for g in self.session.grid_results:
+        for g in self._grid_results_for_current_unit():
             parts.append(
                 tr("status.grid", px=g.pitch_x_physical,
                    py=g.pitch_y_physical, unit=g.unit.value,
@@ -749,6 +981,94 @@ class MeasurementApp(QMainWindow):
             return self._edge_detector.max_grad
         return 255.0
 
+    def _line_calibration_quality_warning_text(self) -> Optional[str]:
+        """Build a quantitative warning message when line calibration quality is weak."""
+        cal = self.session.calibration
+        if not cal.lines or not cal.is_calibrated:
+            return None
+
+        rel_unc_pct = (
+            100.0 * cal.ppu_uncertainty / cal.pixels_per_unit
+            if cal.pixels_per_unit > 0
+            else 0.0
+        )
+
+        if len(cal.lines) == 1:
+            px_len = cal.lines[0].pixel_length
+            if px_len < _LINE_CAL_MIN_RECOMMENDED_PIXELS:
+                return tr(
+                    "warn.cal.single_line_short",
+                    px=px_len,
+                    min_px=_LINE_CAL_MIN_RECOMMENDED_PIXELS,
+                    sigma=DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+                    rel=rel_unc_pct,
+                )
+            return None
+
+        chi2_value, p_value, consistent = chi_squared_consistency(
+            cal.lines,
+            sigma_per_pixel=DEFAULT_LINE_ENDPOINT_SIGMA_PX,
+            confidence_level=_LINE_CAL_CONFIDENCE_LEVEL,
+        )
+        if not consistent:
+            return tr(
+                "warn.cal.inconsistent",
+                n=len(cal.lines),
+                chi2=chi2_value,
+                p=p_value,
+                conf=100.0 * _LINE_CAL_CONFIDENCE_LEVEL,
+                rel=rel_unc_pct,
+            )
+
+        if rel_unc_pct > _LINE_CAL_WARN_REL_UNC_PERCENT:
+            return tr(
+                "warn.cal.high_unc",
+                n=len(cal.lines),
+                rel=rel_unc_pct,
+                threshold=_LINE_CAL_WARN_REL_UNC_PERCENT,
+            )
+
+        return None
+
+    def _show_line_calibration_quality_warning(self) -> None:
+        message = self._line_calibration_quality_warning_text()
+        if message:
+            QMessageBox.warning(
+                self,
+                tr("dialog.calibration_quality_title"),
+                message,
+            )
+
+    def _grid_results_for_current_unit(self) -> List[GridResult]:
+        """Return grid results converted to the current display unit."""
+        out: List[GridResult] = []
+        target = self.session.display_unit
+        for g in self.session.grid_results:
+            if g.unit == Unit.PIXEL or g.unit == target:
+                out.append(g)
+                continue
+            try:
+                out.append(
+                    GridResult(
+                        pitch_x=g.pitch_x,
+                        pitch_y=g.pitch_y,
+                        pitch_x_physical=convert_length(
+                            g.pitch_x_physical, g.unit, target
+                        ),
+                        pitch_y_physical=convert_length(
+                            g.pitch_y_physical, g.unit, target
+                        ),
+                        angle_deg=g.angle_deg,
+                        confidence=g.confidence,
+                        unit=target,
+                        origin_x=g.origin_x,
+                        origin_y=g.origin_y,
+                    )
+                )
+            except ValueError:
+                out.append(g)
+        return out
+
     def _remeasure_all(self) -> None:
         """Re-measure all polygons with current calibration."""
         self.session.results.clear()
@@ -757,7 +1077,12 @@ class MeasurementApp(QMainWindow):
         mg = self._get_max_grad()
         for poly in self.session.polygons:
             if poly.closed and poly.n_vertices >= 3:
-                result = measure_polygon(poly, self.session.calibration, max_grad=mg)
+                result = measure_polygon(
+                    poly,
+                    self.session.calibration,
+                    target_unit=self.session.display_unit,
+                    max_grad=mg,
+                )
                 self.session.results.append(result)
 
     def _remeasure_polygon(self, idx: int) -> None:
@@ -766,12 +1091,67 @@ class MeasurementApp(QMainWindow):
             return
         poly = self.session.polygons[idx]
         mg = self._get_max_grad()
-        result = measure_polygon(poly, self.session.calibration, max_grad=mg)
+        result = measure_polygon(
+            poly,
+            self.session.calibration,
+            target_unit=self.session.display_unit,
+            max_grad=mg,
+        )
         for i, r in enumerate(self.session.results):
             if r.polygon_label == poly.label:
                 self.session.results[i] = result
                 return
         self.session.results.append(result)
+
+    def _prompt_line_calibration_input(self) -> Optional[Tuple[float, Unit]]:
+        """Prompt until valid line calibration input is provided or cancelled."""
+        while True:
+            text, ok = QInputDialog.getText(
+                self,
+                tr("dialog.calibrate_line_title"),
+                tr("dialog.enter_distance"),
+                QLineEdit.EchoMode.Normal,
+                self._last_line_input,
+            )
+            if not ok:
+                return None
+
+            raw = text.strip()
+            length, unit = self._parse_length_input(raw)
+            if length is not None:
+                self._last_line_input = raw
+                return length, unit
+
+            QMessageBox.warning(
+                self,
+                tr("dialog.input_error_title"),
+                tr("dialog.invalid_length"),
+            )
+
+    def _prompt_rect_calibration_input(self) -> Optional[Tuple[float, float, Unit]]:
+        """Prompt until valid rectangle dimensions are provided or cancelled."""
+        while True:
+            text, ok = QInputDialog.getText(
+                self,
+                tr("dialog.calibrate_rect_title"),
+                tr("dialog.enter_rect_dim"),
+                QLineEdit.EchoMode.Normal,
+                self._last_rect_input,
+            )
+            if not ok:
+                return None
+
+            raw = text.strip()
+            w, h, unit = self._parse_rect_input(raw)
+            if w is not None and h is not None:
+                self._last_rect_input = raw
+                return w, h, unit
+
+            QMessageBox.warning(
+                self,
+                tr("dialog.input_error_title"),
+                tr("dialog.invalid_rect"),
+            )
 
     @staticmethod
     def _parse_length_input(s: str) -> Tuple[Optional[float], Unit]:
@@ -780,12 +1160,17 @@ class MeasurementApp(QMainWindow):
         parts = s.split()
         if len(parts) == 1:
             try:
-                return float(parts[0]), Unit.MILLIMETER
+                val = float(parts[0])
+                if val <= 0:
+                    return None, Unit.MILLIMETER
+                return val, Unit.MILLIMETER
             except ValueError:
                 return None, Unit.MILLIMETER
         elif len(parts) == 2:
             try:
                 val = float(parts[0])
+                if val <= 0:
+                    return None, Unit.MILLIMETER
                 unit = unit_from_str(parts[1])
                 return val, unit
             except (ValueError, KeyError):
@@ -813,6 +1198,8 @@ class MeasurementApp(QMainWindow):
         try:
             w = float(parts[0].strip())
             h = float(parts[1].strip())
+            if w <= 0 or h <= 0:
+                return None, None, unit
             return w, h, unit
         except ValueError:
             return None, None, unit

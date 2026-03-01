@@ -1,0 +1,360 @@
+{
+  "type": "Report",
+  "props": { "theme": "auto" },
+  "children": [
+    {
+      "type": "BrandHeader",
+      "props": {
+        "badge": { "en": "Deep Research Report", "zh": "深度研究报告" },
+        "poweredBy": "Actionbook"
+      }
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Overview: Die Shot Photogrammetry", "zh": "概述：Die Shot 摄影测量" }, "icon": "paper" },
+      "children": [
+        {
+          "type": "Prose",
+          "props": {
+            "content": {
+              "en": "This report investigates industrial photogrammetry and metrology approaches for measuring semiconductor die dimensions from web-sourced die shot images. Die shots are top-down photographs of exposed integrated circuit dies, typically captured via optical microscopy after decapsulation. When sourced from the internet, these images lack camera calibration data (EXIF, intrinsics), making precise measurement a challenging but tractable problem.\n\n**Key finding:** Measuring die dimensions from uncalibrated web images is fundamentally a **single-image planar metrology** problem. Since die shots are essentially 2D top-down views of a flat silicon surface, the full complexity of 3D photogrammetry is unnecessary. The core challenge reduces to establishing a reliable **pixels-per-unit (PPU) scaling factor** from a known reference, correcting for perspective/lens distortion, and quantifying measurement uncertainty.\n\nThe semiconductor reverse engineering industry (ChipWise, TechInsights, SemiAnalysis) routinely performs die area estimation from die shots, using a technique called **die-polygon-capturing** — manually or semi-automatically tracing functional block boundaries. A 2024/2025 paper by van der Linden et al. demonstrated deep learning automation of this process.",
+              "zh": "本报告调研了从网络 die shot 图片测量半导体芯片尺寸的工业摄影测量与计量方案。Die shot 是封装去除后、通过光学显微镜拍摄的芯片顶视图。网图缺少相机标定信息（EXIF、内参），这使得精确测量具有挑战性，但并非不可解。\n\n**核心发现：** 从未标定网图测量 die 尺寸，本质上是一个**单图像平面计量**问题。由于 die shot 本质是平面硅表面的俯视图，不需要完整的三维摄影测量。核心挑战归结为：建立可靠的**像素/单位（PPU）缩放因子**、校正透视/镜头畸变、量化测量不确定度。\n\n半导体逆向工程行业（ChipWise、TechInsights、SemiAnalysis）日常执行 die shot 面积估算，使用一种叫 **die-polygon-capturing** 的技术——手动或半自动描绘功能模块边界。van der Linden 等人 2024/2025 的论文展示了用深度学习自动化这一流程。"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Key Findings", "zh": "核心发现" }, "icon": "star" },
+      "children": [
+        {
+          "type": "ContributionList",
+          "props": {
+            "items": [
+              {
+                "badge": { "en": "Finding 1", "zh": "发现 1" },
+                "title": { "en": "Single-Image Planar Metrology Is Sufficient", "zh": "单图像平面计量就够了" },
+                "description": { "en": "Die shots are orthographic projections of a flat surface. Full 3D photogrammetry or stereo reconstruction is unnecessary. The problem reduces to: (1) reference-based PPU calibration, (2) optional perspective/distortion correction via homography, and (3) polygon area computation in calibrated coordinates.", "zh": "Die shot 是平面的正射投影，不需要完整三维重建或立体视觉。问题归结为：(1) 基于参考物的 PPU 标定，(2) 可选的透视/畸变校正（通过单应性矩阵），(3) 标定坐标系下的多边形面积计算。" }
+              },
+              {
+                "badge": { "en": "Finding 2", "zh": "发现 2" },
+                "title": { "en": "Reference-Based Scaling Is the Industry Standard", "zh": "基于参考物缩放是行业标准" },
+                "description": { "en": "All practical die measurement approaches use a known reference dimension. Common references: (1) scale bars in microscopy images, (2) known package dimensions (e.g., QFP/BGA body size), (3) known die dimensions from datasheets, (4) bond pad pitch (typically 50-100um). The PyImageSearch 'pixels per metric' approach is the de facto standard for reference-based image measurement.", "zh": "所有实际可用的 die 测量方案都使用已知参考尺寸。常见参考物：(1) 显微图中的标尺，(2) 已知封装尺寸（如 QFP/BGA 封装体尺寸），(3) 数据手册中的 die 尺寸，(4) 焊盘间距（通常 50-100μm）。PyImageSearch 的「pixels per metric」方法是基于参考物图像测量的事实标准。" }
+              },
+              {
+                "badge": { "en": "Finding 3", "zh": "发现 3" },
+                "title": { "en": "Sub-Pixel Edge Detection Dramatically Improves Accuracy", "zh": "亚像素边缘检测大幅提升精度" },
+                "description": { "en": "Industrial metrology achieves 0.1-0.3 pixel accuracy using sub-pixel edge detection. Three major algorithm families: (1) Fitting-based (Gaussian/Erf function fitting along gradient direction), (2) Moment-based (Zernike moments, spatial moments), (3) Interpolation-based. The Canny-Zernike combination is widely used in industrial dimensional measurement. For die shots, where edges are typically high-contrast metal/silicon boundaries, fitting-based methods perform best.", "zh": "工业计量通过亚像素边缘检测达到 0.1-0.3 像素的精度。三大算法族：(1) 拟合类（沿梯度方向做高斯/Erf 函数拟合），(2) 矩类（Zernike 矩、空间矩），(3) 插值类。Canny-Zernike 组合在工业尺寸测量中广泛使用。对于 die shot，由于边缘通常是高对比度的金属/硅边界，拟合类方法效果最好。" }
+              },
+              {
+                "badge": { "en": "Finding 4", "zh": "发现 4" },
+                "title": { "en": "Perspective Correction via Homography Is Essential for Angled Shots", "zh": "透视校正对倾斜拍摄至关重要" },
+                "description": { "en": "Web-sourced die shots may not be perfectly orthographic. OpenCV's findHomography() + warpPerspective() can correct perspective distortion using 4+ coplanar reference points. For rectangular dies, the die boundary corners themselves serve as reference points for a projective-to-affine correction. When the viewing angle deviates >5 degrees from normal, uncorrected measurements can have 2-5% systematic error.", "zh": "网图 die shot 不一定是完美正射的。OpenCV 的 findHomography() + warpPerspective() 可以用 4 个以上共面参考点校正透视畸变。对于矩形 die，die 边界四角本身就可以作为投影-仿射校正的参考点。当视角偏离法线 >5 度时，未校正的测量会有 2-5% 的系统误差。" }
+              },
+              {
+                "badge": { "en": "Finding 5", "zh": "发现 5" },
+                "title": { "en": "Deep Learning Is Automating Die-Polygon-Capturing", "zh": "深度学习正在自动化 die-polygon 捕获" },
+                "description": { "en": "A 2024 paper (van der Linden et al., Expert Systems with Applications) demonstrated using U-Net CNNs for automated polygon extraction from die shots, achieving significant speedup over manual annotation. Nyako et al. (2024, IOP Science) applied U-Net to reverse engineering chip die layer segmentation. These approaches complement traditional edge detection for automated functional block identification and area measurement.", "zh": "van der Linden 等人 2024 年的论文（Expert Systems with Applications）展示了用 U-Net CNN 自动从 die shot 提取多边形，比手动标注快了一个数量级。Nyako 等人（2024，IOP Science）将 U-Net 应用于芯片 die 层分割逆向工程。这些方法补充了传统边缘检测，可用于自动化功能模块识别和面积测量。" }
+              },
+              {
+                "badge": { "en": "Finding 6", "zh": "发现 6" },
+                "title": { "en": "Uncertainty Budget for Web Image Measurement Is Quantifiable", "zh": "网图测量的不确定度预算可以量化" },
+                "description": { "en": "The total measurement uncertainty combines: (1) Pixel quantization: +/-0.5px (or +/-0.1px with sub-pixel detection), (2) Reference calibration uncertainty: depends on reference accuracy, (3) Lens distortion: radial/tangential, 1-3% for uncalibrated consumer cameras, (4) Perspective foreshortening: 0-5% depending on viewing angle, (5) JPEG compression artifacts: +/-0.5-1px for lossy compressed images, (6) Image stitching errors: 1-5px at seam boundaries. For a typical high-quality die shot at 1000px die width, the expected measurement uncertainty is 1-3% without calibration, and <1% with proper reference scaling.", "zh": "总测量不确定度由以下因素组合：(1) 像素量化：±0.5px（亚像素检测可达 ±0.1px），(2) 参考标定不确定度：取决于参考物精度，(3) 镜头畸变：径向/切向，未标定消费级相机 1-3%，(4) 透视缩短：0-5% 取决于视角，(5) JPEG 压缩伪影：有损压缩图像 ±0.5-1px，(6) 图像拼接误差：拼接缝处 1-5px。对于典型的高质量 die shot（die 宽度 1000px），预期测量不确定度在无标定时 1-3%，有恰当参考缩放时 <1%。" }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Measurement Pipeline Architecture", "zh": "测量流水线架构" }, "icon": "bulb" },
+      "children": [
+        {
+          "type": "MethodOverview",
+          "props": {
+            "steps": [
+              {
+                "step": "1",
+                "title": { "en": "Image Acquisition & Preprocessing", "zh": "图像获取与预处理" },
+                "description": { "en": "Load web-sourced die shot. Assess image quality (resolution, compression, lighting uniformity). Optionally denoise using bilateral filter or non-local means to preserve edges while reducing JPEG artifacts.", "zh": "加载网图 die shot。评估图像质量（分辨率、压缩、光照均匀性）。可选使用双边滤波或非局部均值去噪，在去除 JPEG 伪影的同时保留边缘。" }
+              },
+              {
+                "step": "2",
+                "title": { "en": "Reference Identification & PPU Calibration", "zh": "参考物识别与 PPU 标定" },
+                "description": { "en": "Identify a reference object with known physical dimension: scale bar, package outline, bond pad pitch, or known die feature. Measure reference in pixels. Compute PPU (pixels per unit) = pixel_distance / known_physical_distance. For rectangular references, use Monte Carlo sampling on reference edge detection to quantify PPU uncertainty.", "zh": "识别具有已知物理尺寸的参考物：标尺、封装轮廓、焊盘间距或已知 die 特征。以像素为单位测量参考物。计算 PPU = 像素距离 / 已知物理距离。对于矩形参考物，用蒙特卡洛采样参考边缘检测来量化 PPU 不确定度。" }
+              },
+              {
+                "step": "3",
+                "title": { "en": "Perspective & Distortion Correction", "zh": "透视与畸变校正" },
+                "description": { "en": "If the die shot shows visible perspective distortion (non-rectangular die appearing as trapezoid), apply homography correction: identify 4 die corner points, compute H = findHomography(src_pts, dst_pts), warp image. For barrel/pincushion distortion from uncalibrated cameras, estimate distortion coefficients from straight-line features (die edges should be straight).", "zh": "如果 die shot 有明显透视畸变（矩形 die 呈梯形），应用单应性校正：识别 4 个 die 角点，计算 H = findHomography(src_pts, dst_pts)，变换图像。对于未标定相机的桶形/枕形畸变，从直线特征（die 边缘应为直线）估计畸变系数。" }
+              },
+              {
+                "step": "4",
+                "title": { "en": "Edge Detection & Feature Extraction", "zh": "边缘检测与特征提取" },
+                "description": { "en": "Apply Canny edge detection to identify die boundary. Refine to sub-pixel accuracy using: (a) Gaussian/Erf fitting along gradient normals (0.1px accuracy), (b) Zernike moment method (orientation-invariant), or (c) parabolic fitting of gradient magnitude peaks. Extract die boundary as an ordered polygon. For complex die shapes (non-rectangular), use contour detection + polygon approximation.", "zh": "用 Canny 边缘检测识别 die 边界。通过以下方法细化到亚像素精度：(a) 沿梯度法线的高斯/Erf 拟合（0.1px 精度），(b) Zernike 矩方法（旋转不变），(c) 梯度幅值峰值的抛物线拟合。将 die 边界提取为有序多边形。对于复杂 die 形状（非矩形），使用轮廓检测 + 多边形逼近。" }
+              },
+              {
+                "step": "5",
+                "title": { "en": "Dimensional Measurement", "zh": "尺寸测量" },
+                "description": { "en": "Compute die dimensions from the calibrated polygon: width, height, area, and perimeter. For rectangular dies: fit minimum bounding rectangle. For arbitrary polygons: use Shoelace formula for area. Convert from pixels to physical units using PPU factor. Report both the measurement and its uncertainty interval.", "zh": "从标定后的多边形计算 die 尺寸：宽度、高度、面积、周长。对于矩形 die：拟合最小外接矩形。对于任意多边形：用鞋带公式计算面积。使用 PPU 因子从像素转换为物理单位。同时报告测量值和不确定度区间。" }
+              },
+              {
+                "step": "6",
+                "title": { "en": "Uncertainty Quantification", "zh": "不确定度量化" },
+                "description": { "en": "Propagate uncertainties through the measurement chain using GUM (Guide to the expression of Uncertainty in Measurement) or Monte Carlo methods. Key uncertainty contributors: PPU calibration (reference dimension accuracy + edge detection noise), perspective correction residuals, edge localization precision, and image resolution. Report combined standard uncertainty and expanded uncertainty (k=2, 95% confidence).", "zh": "使用 GUM（测量不确定度表述指南）或蒙特卡洛方法在测量链中传播不确定度。关键不确定度来源：PPU 标定（参考尺寸精度 + 边缘检测噪声）、透视校正残差、边缘定位精度、图像分辨率。报告合成标准不确定度和扩展不确定度（k=2，95% 置信度）。" }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Sub-Pixel Edge Detection Techniques", "zh": "亚像素边缘检测技术" }, "icon": "bulb" },
+      "children": [
+        {
+          "type": "Table",
+          "props": {
+            "columns": [
+              { "key": "method", "label": { "en": "Method", "zh": "方法" } },
+              { "key": "accuracy", "label": { "en": "Accuracy (px)", "zh": "精度 (px)" } },
+              { "key": "principle", "label": { "en": "Principle", "zh": "原理" } },
+              { "key": "pros", "label": { "en": "Pros", "zh": "优点" } },
+              { "key": "cons", "label": { "en": "Cons", "zh": "缺点" } }
+            ],
+            "rows": [
+              {
+                "method": "Gaussian Fitting / 高斯拟合",
+                "accuracy": "0.05-0.1",
+                "principle": "Fit Gaussian to gradient profile / 梯度剖面拟合高斯",
+                "pros": "Highest accuracy, noise robust / 精度最高、抗噪好",
+                "cons": "Slow, assumes Gaussian edge model / 慢、假设高斯边缘模型"
+              },
+              {
+                "method": "Erf Function Fitting / Erf 函数拟合",
+                "accuracy": "0.05-0.15",
+                "principle": "Fit erf() to intensity profile / 强度剖面拟合 erf()",
+                "pros": "Matches optical edge physics / 符合光学边缘物理",
+                "cons": "Requires good initial estimate / 需要好的初始估计"
+              },
+              {
+                "method": "Zernike Moments / Zernike 矩",
+                "accuracy": "0.1-0.2",
+                "principle": "Orthogonal moment on 5x5 mask / 5x5 窗口正交矩",
+                "pros": "Rotation invariant, fast / 旋转不变、快",
+                "cons": "Less accurate than fitting / 不如拟合精确"
+              },
+              {
+                "method": "Parabolic Interpolation / 抛物线插值",
+                "accuracy": "0.1-0.3",
+                "principle": "Parabola through 3 gradient peaks / 3 个梯度峰做抛物线",
+                "pros": "Very fast, simple / 很快、简单",
+                "cons": "Orientation sensitive / 对方向敏感"
+              },
+              {
+                "method": "Spatial Moments / 空间矩",
+                "accuracy": "0.2-0.5",
+                "principle": "Gray-level spatial moments / 灰度空间矩",
+                "pros": "Good for general edges / 通用边缘适用",
+                "cons": "Lower accuracy / 精度较低"
+              }
+            ],
+            "striped": true,
+            "compact": false
+          }
+        },
+        {
+          "type": "Prose",
+          "props": {
+            "content": {
+              "en": "**Recommendation for die shots:** The **Gaussian/Erf fitting** approach is best suited for die boundary measurement because:\n1. Die edges are high-contrast metal-silicon or scribe-line boundaries with well-defined profiles\n2. The edge spread function (ESF) of optical microscope images closely matches the erf() model\n3. Accuracy of 0.05-0.1 px is achievable, translating to sub-micrometer precision for typical die shots\n4. Robust to JPEG compression artifacts when combined with gradient-direction fitting\n\nThe Canny + Zernike pipeline (Huang et al. 2020, cited 52 times) is a proven industrial approach: use Canny for initial pixel-level edge detection, then refine with Zernike moments for sub-pixel positions. The improved Canny-Zernike algorithm (2022, Wiley) added Otsu thresholding and improved Hough transform for measurement of machined workpieces.",
+              "zh": "**针对 die shot 的建议：** **高斯/Erf 拟合**方法最适合 die 边界测量，原因如下：\n1. Die 边缘是高对比度的金属-硅或切割线边界，轮廓明确\n2. 光学显微图像的边缘扩展函数（ESF）与 erf() 模型高度吻合\n3. 可达 0.05-0.1px 精度，对应典型 die shot 的亚微米精度\n4. 结合梯度方向拟合，对 JPEG 压缩伪影具有鲁棒性\n\nCanny + Zernike 流水线（Huang 等人 2020，被引 52 次）是经过验证的工业方案：用 Canny 做初始像素级边缘检测，再用 Zernike 矩细化到亚像素位置。改进的 Canny-Zernike 算法（2022，Wiley）增加了 Otsu 阈值和改进的 Hough 变换，用于机加工工件的测量。"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Calibration Approaches for Web Images", "zh": "网图标定方案" }, "icon": "bulb" },
+      "children": [
+        {
+          "type": "Prose",
+          "props": {
+            "content": {
+              "en": "### The Fundamental Challenge\n\nWeb-sourced die shots lack EXIF metadata, camera intrinsics, and physical scale information. Three calibration strategies address this:\n\n### Strategy 1: Known Reference Object (Recommended)\n\nUse a visible reference with known physical dimensions:\n- **Scale bar** in the image (common in professional die shots from TechInsights, ChipWise)\n- **Package outline** with known dimensions from the datasheet\n- **Bond pad pitch** (industry standard: 50-100μm, sometimes specified in die documentation)\n- **Known sub-die feature** (e.g., SRAM bit-cell area at a given process node)\n\nThe PPU factor: `pixels_per_mm = measured_reference_px / known_reference_mm`\n\n### Strategy 2: Homography from Known Geometry\n\nWhen the die shape is known (rectangular with known aspect ratio):\n1. Detect die corners (4 points minimum)\n2. Compute homography H mapping image corners to a rectified rectangle\n3. If one dimension is known, derive PPU from the rectified image\n4. OpenCV: `H, _ = cv2.findHomography(img_pts, world_pts)` then `cv2.warpPerspective()`\n\nThis simultaneously corrects perspective distortion and establishes scale.\n\n### Strategy 3: Cross-Referencing Known Die Sizes\n\nFor well-known chips, die sizes are often published:\n- SemiAnalysis die yield calculator database\n- TechInsights teardown reports\n- WikiChip die area entries\n- Academic papers and manufacturer presentations\n\nUse the published die area as a consistency check even if not as primary calibration.\n\n### Distortion Handling\n\nFor images from consumer cameras (not microscopes):\n- **Barrel distortion** is the dominant aberration (straight lines appear curved)\n- Estimate from die edges: if die edges appear curved, fit a radial distortion model\n- OpenCV's `cv2.calibrateCamera()` can work with a single image if enough straight lines are visible\n- For microscopy images, distortion is typically negligible (<0.1%)",
+              "zh": "### 根本挑战\n\n网图 die shot 缺少 EXIF 元数据、相机内参和物理尺度信息。三种标定策略可以解决这个问题：\n\n### 策略 1：已知参考物（推荐）\n\n使用图中可见的、物理尺寸已知的参考物：\n- 图中的**标尺**（TechInsights、ChipWise 等专业 die shot 常见）\n- 数据手册中有已知尺寸的**封装轮廓**\n- **焊盘间距**（行业标准：50-100μm，有时在 die 文档中注明）\n- **已知子 die 特征**（如特定工艺节点的 SRAM bit-cell 面积）\n\nPPU 因子：`pixels_per_mm = 参考物像素测量值 / 参考物已知毫米值`\n\n### 策略 2：基于已知几何的单应性\n\n当 die 形状已知（已知长宽比的矩形）时：\n1. 检测 die 角点（至少 4 个点）\n2. 计算将图像角点映射到矫正矩形的单应性 H\n3. 如果已知一个维度，从矫正图像推导 PPU\n4. OpenCV：`H, _ = cv2.findHomography(img_pts, world_pts)` 然后 `cv2.warpPerspective()`\n\n这同时校正了透视畸变并建立了尺度。\n\n### 策略 3：交叉验证已知 Die 尺寸\n\n对于知名芯片，die 尺寸通常已被公开：\n- SemiAnalysis die yield 计算器数据库\n- TechInsights 拆解报告\n- WikiChip die 面积条目\n- 学术论文和厂商演示文稿\n\n即使不作为主标定，也可用已发布的 die 面积做一致性校验。\n\n### 畸变处理\n\n对于消费级相机图片（非显微镜）：\n- **桶形畸变**是主要像差（直线看起来弯曲）\n- 从 die 边缘估计：如果 die 边缘弯曲，拟合径向畸变模型\n- OpenCV 的 `cv2.calibrateCamera()` 在有足够可见直线时可以用单张图像工作\n- 显微镜图像的畸变通常可忽略（<0.1%）"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Open-Source Tools & Libraries", "zh": "开源工具与库" }, "icon": "code" },
+      "children": [
+        {
+          "type": "Table",
+          "props": {
+            "columns": [
+              { "key": "tool", "label": { "en": "Tool / Library", "zh": "工具/库" } },
+              { "key": "role", "label": { "en": "Role", "zh": "用途" } },
+              { "key": "features", "label": { "en": "Key Features", "zh": "关键特性" } }
+            ],
+            "rows": [
+              {
+                "tool": "OpenCV (Python)",
+                "role": "Core image processing / 核心图像处理",
+                "features": "Canny, findContours, findHomography, warpPerspective, calibrateCamera, minAreaRect / Canny、轮廓检测、单应性、透视变换、标定、最小外接矩形"
+              },
+              {
+                "tool": "scikit-image",
+                "role": "Advanced edge detection / 高级边缘检测",
+                "features": "Subpixel edge detection (Devernay), active contours, morphology, measure.regionprops / 亚像素边缘（Devernay）、活动轮廓、形态学、区域属性"
+              },
+              {
+                "tool": "NumPy / SciPy",
+                "role": "Numerical computation / 数值计算",
+                "features": "curve_fit for Gaussian/Erf edge fitting, spatial.KDTree for edge snapping, linalg for homography / 高斯/Erf 拟合、KD-Tree 边缘吸附、单应性线性代数"
+              },
+              {
+                "tool": "ImageJ / Fiji",
+                "role": "Interactive measurement / 交互式测量",
+                "features": "Scale bar calibration, manual ROI measurement, Ridge Detection plugin for sub-pixel edges / 标尺标定、手动 ROI 测量、Ridge Detection 插件做亚像素边缘"
+              },
+              {
+                "tool": "Hugin",
+                "role": "Image stitching / 图像拼接",
+                "features": "Panorama stitching with lens distortion correction, useful for stitched die shot composites / 带镜头畸变校正的全景拼接，适用于拼接 die shot"
+              },
+              {
+                "tool": "PyTorch / TensorFlow",
+                "role": "Deep learning segmentation / 深度学习分割",
+                "features": "U-Net for die polygon segmentation, semantic segmentation of functional blocks / U-Net 做 die 多边形分割、功能模块语义分割"
+              }
+            ],
+            "striped": true,
+            "compact": false
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Uncertainty Analysis Framework", "zh": "不确定度分析框架" }, "icon": "chart" },
+      "children": [
+        {
+          "type": "MetricsGrid",
+          "props": {
+            "metrics": [
+              { "label": { "en": "Pixel Quantization", "zh": "像素量化" }, "value": "0.5", "suffix": "px" },
+              { "label": { "en": "Sub-pixel Edge", "zh": "亚像素边缘" }, "value": "0.05-0.1", "suffix": "px" },
+              { "label": { "en": "JPEG Artifacts", "zh": "JPEG 伪影" }, "value": "0.5-1", "suffix": "px" },
+              { "label": { "en": "Perspective Error", "zh": "透视误差" }, "value": "0-5", "suffix": "%" },
+              { "label": { "en": "Lens Distortion", "zh": "镜头畸变" }, "value": "1-3", "suffix": "%" },
+              { "label": { "en": "Calibrated Total", "zh": "标定后总误差" }, "value": "<1", "suffix": "%" }
+            ],
+            "cols": 3
+          }
+        },
+        {
+          "type": "Prose",
+          "props": {
+            "content": {
+              "en": "### Error Budget for Die Shot Measurement\n\nFollowing the GUM (Guide to the Expression of Uncertainty in Measurement, ISO/IEC 98-3) framework:\n\n**Type A uncertainties** (statistical evaluation):\n- Edge detection repeatability: measured by running edge detection N times with slight parameter variations\n- PPU calibration spread: measured by sampling multiple reference points\n\n**Type B uncertainties** (non-statistical evaluation):\n- Reference dimension accuracy: from datasheet tolerance or scale bar graduation\n- Pixel quantization: rectangular distribution, u = 0.5px / sqrt(3) = 0.29px\n- JPEG compression: depends on quality factor, typically 0.5-1px for Q>80\n- Lens distortion: estimated from die edge straightness analysis\n- Perspective foreshortening: estimated from die corner angle analysis\n\n**Combined standard uncertainty:**\n`u_c = sqrt(u_edge^2 + u_ppu^2 + u_distortion^2 + u_perspective^2 + u_jpeg^2)`\n\n**Monte Carlo approach** (as implemented in diemeter's calibration module):\n1. Sample edge positions from their uncertainty distributions\n2. Sample PPU from calibration uncertainty\n3. Compute measurement N times (N=1000+)\n4. Report mean +/- 2*std as 95% confidence interval\n\n**Practical guidance:** For a 1000px-wide die shot with a good reference, expect ~1% relative uncertainty (~100μm for a 10mm die). Sub-pixel edge detection reduces this to ~0.3% (~30μm).",
+              "zh": "### Die Shot 测量的误差预算\n\n遵循 GUM（测量不确定度表述指南，ISO/IEC 98-3）框架：\n\n**A 类不确定度**（统计评估）：\n- 边缘检测重复性：通过微调参数运行 N 次边缘检测来测量\n- PPU 标定分散度：通过采样多个参考点来测量\n\n**B 类不确定度**（非统计评估）：\n- 参考尺寸精度：来自数据手册公差或标尺刻度\n- 像素量化：矩形分布，u = 0.5px / sqrt(3) = 0.29px\n- JPEG 压缩：取决于质量因子，Q>80 时通常 0.5-1px\n- 镜头畸变：从 die 边缘直线度分析估计\n- 透视缩短：从 die 角点角度分析估计\n\n**合成标准不确定度：**\n`u_c = sqrt(u_edge^2 + u_ppu^2 + u_distortion^2 + u_perspective^2 + u_jpeg^2)`\n\n**蒙特卡洛方法**（如 diemeter 标定模块的实现）：\n1. 从不确定度分布中采样边缘位置\n2. 从标定不确定度中采样 PPU\n3. 计算 N 次测量（N=1000+）\n4. 报告均值 ± 2*std 作为 95% 置信区间\n\n**实用指南：** 对于 1000px 宽的 die shot 配合好的参考物，预期约 1% 相对不确定度（10mm die 约 100μm）。亚像素边缘检测可将其降至约 0.3%（约 30μm）。"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Industry Practices & Players", "zh": "行业实践与关键参与者" }, "icon": "info" },
+      "children": [
+        {
+          "type": "Prose",
+          "props": {
+            "content": {
+              "en": "### Professional Die Analysis Ecosystem\n\n**TechInsights** (formerly Chipworks) — The industry leader in semiconductor reverse engineering. Uses professional-grade metallurgical microscopes, SEM, and proprietary analysis tools. Die shot analysis is part of their comprehensive teardown service. Their die area measurements are considered authoritative reference values.\n\n**ChipWise** (NanoPhysics B.V., Netherlands) — Specializes in die shot analysis. Their workflow: (1) teardown, (2) mechanical grinding + chemical etching to extract die, (3) high-magnification optical microscopy for front-side die shot, (4) bulk silicon removal for back-side imaging. They offer both front-side and back-side die shots with deep zoom capability.\n\n**SemiAnalysis** — Provides die yield calculators and die size databases. Their die shot analyses (e.g., Meteor Lake die shot and architecture analysis) combine published dimensions with detailed functional block annotation.\n\n### Community & Hobbyist Practices\n\n**Zeptobars** — Community-driven die shot repository since 2012. Uses affordable microscopy setups ($500 level) with chemical decapping.\n\n**Siliconpr0n** — Collaborative wiki archive for die images and reverse engineering.\n\n**Ken Shirriff / righto.com** — Detailed die photography and analysis tutorials, including image stitching techniques for high-resolution composites.\n\n### Die-Polygon-Capturing Technique\n\nThe core methodology used by the industry for die area estimation:\n1. Obtain high-resolution die shot (typically stitched from multiple microscopy frames)\n2. Identify the die boundary (scribe line or passivation edge)\n3. Trace functional block polygons (CPU cores, GPU, memory, I/O, etc.)\n4. Calibrate using known dimension (scale bar or published die size)\n5. Compute areas per block and total die area\n\nThis has been the manual gold standard. van der Linden et al. (2025) demonstrated automated polygon extraction using U-Net deep learning, citing 53 references and 9 citations within one year — indicating strong industry interest in automation.",
+              "zh": "### 专业 Die 分析生态\n\n**TechInsights**（前身 Chipworks）—— 半导体逆向工程行业领导者。使用专业级金相显微镜、SEM 和专有分析工具。Die shot 分析是其完整拆解服务的一部分。他们的 die 面积测量被视为权威参考值。\n\n**ChipWise**（NanoPhysics B.V.，荷兰）—— 专门做 die shot 分析。工作流：(1) 拆解，(2) 机械研磨 + 化学刻蚀提取 die，(3) 高倍光学显微镜拍正面 die shot，(4) 去除体硅拍背面。提供正面和背面 die shot，支持深度缩放。\n\n**SemiAnalysis** —— 提供 die yield 计算器和 die 尺寸数据库。其 die shot 分析（如 Meteor Lake die shot 和架构分析）结合公开尺寸与详细功能模块标注。\n\n### 社区与爱好者实践\n\n**Zeptobars** —— 自 2012 年的社区驱动 die shot 仓库。使用入门级显微设备（500 美元级别）配合化学去封。\n\n**Siliconpr0n** —— 协作式 die 图像和逆向工程 wiki 档案。\n\n**Ken Shirriff / righto.com** —— 详细的 die 摄影和分析教程，包括高分辨率合成的图像拼接技术。\n\n### Die-Polygon-Capturing 技术\n\n行业用于 die 面积估算的核心方法：\n1. 获取高分辨率 die shot（通常由多帧显微图像拼接而成）\n2. 识别 die 边界（切割线或钝化层边缘）\n3. 描绘功能模块多边形（CPU 核心、GPU、内存、I/O 等）\n4. 用已知尺寸标定（标尺或已公开的 die 尺寸）\n5. 计算各模块面积和总 die 面积\n\n这一直是手动的黄金标准。van der Linden 等人（2025）展示了用 U-Net 深度学习自动提取多边形，引用 53 篇参考文献，一年内被引 9 次——说明行业对自动化有强烈需求。"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Recommendations for Diemeter Project", "zh": "对 Diemeter 项目的建议" }, "icon": "star" },
+      "children": [
+        {
+          "type": "ContributionList",
+          "props": {
+            "items": [
+              {
+                "badge": { "en": "Priority 1", "zh": "优先级 1" },
+                "title": { "en": "Implement Multi-Reference PPU Calibration", "zh": "实现多参考物 PPU 标定" },
+                "description": { "en": "Support multiple calibration reference types: user-drawn scale bars, rectangular package outlines (4-point homography + known dimensions), bond pad pitch detection, and manual known-dimension input. Average PPU from multiple references to improve accuracy. The Monte Carlo PPU uncertainty already in the codebase is excellent — extend it to support all reference types.", "zh": "支持多种标定参考类型：用户绘制标尺、矩形封装轮廓（4 点单应性 + 已知尺寸）、焊盘间距检测、手动输入已知尺寸。从多个参考物平均 PPU 以提高精度。代码中已有的蒙特卡洛 PPU 不确定度做得很好——扩展到支持所有参考类型。" }
+              },
+              {
+                "badge": { "en": "Priority 2", "zh": "优先级 2" },
+                "title": { "en": "Add Perspective Correction Module", "zh": "增加透视校正模块" },
+                "description": { "en": "Implement automatic or semi-automatic perspective correction for tilted die shots: detect die corners (existing polygon + minAreaRect), compute expected aspect ratio from known die dimensions or user input, apply homography correction before measurement. This addresses the #1 source of systematic error in web-sourced images.", "zh": "对倾斜 die shot 实现自动或半自动透视校正：检测 die 角点（已有多边形 + minAreaRect），从已知 die 尺寸或用户输入计算预期长宽比，测量前应用单应性校正。这解决了网图测量的首要系统误差来源。" }
+              },
+              {
+                "badge": { "en": "Priority 3", "zh": "优先级 3" },
+                "title": { "en": "Upgrade to Sub-Pixel Edge Detection", "zh": "升级到亚像素边缘检测" },
+                "description": { "en": "The existing KD-tree edge snapping is a good foundation. Add Gaussian/Erf fitting along gradient normals at each edge point for 0.1px sub-pixel refinement. This is a 5-10x improvement in edge localization accuracy with minimal computational overhead. The Canny-Zernike approach is also viable for a faster but slightly less accurate alternative.", "zh": "现有的 KD-tree 边缘吸附是很好的基础。在每个边缘点沿梯度法线添加高斯/Erf 拟合，实现 0.1px 亚像素细化。这在边缘定位精度上有 5-10 倍提升，计算开销很小。Canny-Zernike 方法也可行，速度更快但精度略低。" }
+              },
+              {
+                "badge": { "en": "Priority 4", "zh": "优先级 4" },
+                "title": { "en": "Build Known-Die-Size Database", "zh": "建立已知 Die 尺寸数据库" },
+                "description": { "en": "Create a lightweight database of known die dimensions from public sources (WikiChip, SemiAnalysis, manufacturer specs). Use for: (1) auto-suggesting calibration references, (2) cross-validating user measurements, (3) bootstrapping PPU when no other reference is available. Even a small database of popular chips (Apple A-series, Qualcomm Snapdragon, Intel Core, AMD Zen) would be valuable.", "zh": "从公开来源（WikiChip、SemiAnalysis、厂商规格）创建轻量级已知 die 尺寸数据库。用于：(1) 自动建议标定参考，(2) 交叉验证用户测量，(3) 无其他参考时引导 PPU。即使只是热门芯片（Apple A 系列、高通骁龙、Intel Core、AMD Zen）的小型数据库也很有价值。" }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Section",
+      "props": { "title": { "en": "Sources", "zh": "信息来源" }, "icon": "link" },
+      "children": [
+        {
+          "type": "LinkGroup",
+          "props": {
+            "links": [
+              { "href": "https://grokipedia.com/page/Die_shot", "label": "Grokipedia: Die Shot - Comprehensive overview of die photography" },
+              { "href": "https://pyimagesearch.com/2016/03/28/measuring-size-of-objects-in-an-image-with-opencv/", "label": "PyImageSearch: Measuring Size of Objects with OpenCV (pixels per metric)" },
+              { "href": "https://docs.opencv.org/4.x/d9/dab/tutorial_homography.html", "label": "OpenCV: Homography Tutorial - Perspective correction & planar measurement" },
+              { "href": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6605074/", "label": "Orji et al. (2018): Metrology for the Next Generation of Semiconductor Devices - Nature Electronics" },
+              { "href": "https://www.sciencedirect.com/science/article/pii/S0957417424023467", "label": "van der Linden et al. (2025): Automating die-polygon-capturing with deep learning" },
+              { "href": "https://iopscience.iop.org/article/10.1088/1742-6596/2024", "label": "Nyako et al. (2024): Reverse Engineering Chip Die Using U-Net CNNs" },
+              { "href": "https://www.worldscientific.com/doi/abs/10.1142/S0218001420520126", "label": "Huang et al. (2020): Sub-Pixel Edge Detection Based on Canny-Zernike Moments" },
+              { "href": "https://onlinelibrary.wiley.com/doi/10.1002/cplx.22009", "label": "Improved Canny-Zernike Subpixel Detection Algorithm (2022)" },
+              { "href": "https://chipwise.tech/chip-die-shot", "label": "ChipWise: Professional Die Shot Analysis Service" },
+              { "href": "https://semianalysis.com/die-yield-calculator", "label": "SemiAnalysis: Die Yield Calculator" },
+              { "href": "https://www.researchgate.net/publication/220201710", "label": "Reference-Free Machine Vision Inspection of Semiconductor Die" },
+              { "href": "https://thedesignersassistant.com/2015/04/09/3-methods-of-scaling-from-photographs/", "label": "3 Methods of Scaling From Photographs (practical reference-based scaling)" },
+              { "href": "https://www.righto.com/2015/12/creating-high-resolution-integrated.html", "label": "Ken Shirriff: Creating High-Resolution IC Die Photos" },
+              { "href": "https://academic.oup.com/mam/article-abstract/25/5/1049/6833735", "label": "Arat et al. (2019): Estimating Step Heights from Top-Down SEM Images" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "BrandFooter",
+      "props": {
+        "timestamp": "2026-02-16T10:30:00Z",
+        "attribution": "Powered by Actionbook",
+        "disclaimer": {
+          "en": "This report was generated by AI using web sources. Verify critical information independently.",
+          "zh": "本报告由 AI 基于网络来源生成，请独立验证关键信息。"
+        }
+      }
+    }
+  ]
+}

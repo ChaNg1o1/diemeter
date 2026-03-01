@@ -81,12 +81,10 @@ class TestEndToEndMeasurement:
 
     def test_multi_line_calibration_consistency(self):
         """Multiple calibration lines with consistent ratios should yield
-        a tight PPU estimate with near-zero uncertainty.
+        a tight PPU estimate with finite uncertainty from endpoint noise.
 
-        Note: The plan originally used chi_squared_consistency which does not
-        exist in the current codebase. Instead we verify that the weighted
-        average PPU is accurate and the standard deviation (ppu_uncertainty)
-        is effectively zero when all lines agree perfectly.
+        We verify that the weighted estimate is accurate and that uncertainty
+        remains bounded/non-zero under the endpoint localization model.
         """
         cal = Calibration(unit=Unit.MILLIMETER)
         # Three lines all giving exactly 10 px/mm
@@ -98,5 +96,6 @@ class TestEndToEndMeasurement:
         update_calibration_lines(cal)
 
         assert cal.pixels_per_unit == pytest.approx(10.0, rel=0.01)
-        # All lines agree perfectly, so weighted std should be ~0
-        assert cal.ppu_uncertainty == pytest.approx(0.0, abs=1e-10)
+        # All lines agree perfectly, but measurement noise floor still applies.
+        assert cal.ppu_uncertainty > 0.0
+        assert cal.ppu_uncertainty < 0.05

@@ -16,6 +16,7 @@ from .model import (
     Session,
     Unit,
     Vertex,
+    unit_from_str,
 )
 
 
@@ -43,6 +44,8 @@ def _cal_line_to_dict(line: CalibrationLine) -> Dict[str, Any]:
         "p1": _vertex_to_dict(line.p1),
         "known_length": line.known_length,
         "unit": line.unit.value,
+        "endpoint_sigma": line.endpoint_sigma,
+        "source": line.source,
     }
 
 
@@ -52,6 +55,8 @@ def _cal_line_from_dict(d: Dict[str, Any]) -> CalibrationLine:
         p1=_vertex_from_dict(d["p1"]),
         known_length=d["known_length"],
         unit=Unit(d["unit"]),
+        endpoint_sigma=d.get("endpoint_sigma", 0.5),
+        source=d.get("source", "manual"),
     )
 
 
@@ -121,6 +126,11 @@ def _result_to_dict(r: MeasurementResult) -> Dict[str, Any]:
         "area_uncertainty_ppu": r.area_uncertainty_ppu,
         "perimeter_physical": r.perimeter_physical,
         "perimeter_uncertainty": r.perimeter_uncertainty,
+        "bbox_width_physical": r.bbox_width_physical,
+        "bbox_height_physical": r.bbox_height_physical,
+        "bbox_angle_deg": r.bbox_angle_deg,
+        "bbox_width_uncertainty": r.bbox_width_uncertainty,
+        "bbox_height_uncertainty": r.bbox_height_uncertainty,
         "unit": r.unit.value,
         "n_vertices": r.n_vertices,
     }
@@ -136,6 +146,11 @@ def _result_from_dict(d: Dict[str, Any]) -> MeasurementResult:
         area_uncertainty_ppu=d.get("area_uncertainty_ppu", 0.0),
         perimeter_physical=d.get("perimeter_physical", 0.0),
         perimeter_uncertainty=d.get("perimeter_uncertainty", 0.0),
+        bbox_width_physical=d.get("bbox_width_physical", 0.0),
+        bbox_height_physical=d.get("bbox_height_physical", 0.0),
+        bbox_angle_deg=d.get("bbox_angle_deg", 0.0),
+        bbox_width_uncertainty=d.get("bbox_width_uncertainty", 0.0),
+        bbox_height_uncertainty=d.get("bbox_height_uncertainty", 0.0),
         unit=Unit(d["unit"]),
         n_vertices=d["n_vertices"],
     )
@@ -178,6 +193,7 @@ def session_to_dict(session: Session) -> Dict[str, Any]:
         "polygons": [_polygon_to_dict(p) for p in session.polygons],
         "results": [_result_to_dict(r) for r in session.results],
         "grid_results": [_grid_result_to_dict(g) for g in session.grid_results],
+        "display_unit": session.display_unit.value,
         "edge_snap_enabled": session.edge_snap_enabled,
         "edge_snap_radius": session.edge_snap_radius,
     }
@@ -185,12 +201,28 @@ def session_to_dict(session: Session) -> Dict[str, Any]:
 
 def session_from_dict(d: Dict[str, Any]) -> Session:
     """Deserialize a Session from a dict."""
+    calibration = _calibration_from_dict(d.get("calibration", {}))
+    default_display_unit = (
+        calibration.unit if calibration.unit != Unit.PIXEL else Unit.MILLIMETER
+    )
+    raw_display_unit = d.get("display_unit", default_display_unit.value)
+    try:
+        display_unit = Unit(raw_display_unit)
+    except Exception:
+        try:
+            display_unit = unit_from_str(str(raw_display_unit))
+        except Exception:
+            display_unit = default_display_unit
+    if display_unit == Unit.PIXEL:
+        display_unit = default_display_unit
+
     return Session(
         image_path=d.get("image_path", ""),
-        calibration=_calibration_from_dict(d.get("calibration", {})),
+        calibration=calibration,
         polygons=[_polygon_from_dict(p) for p in d.get("polygons", [])],
         results=[_result_from_dict(r) for r in d.get("results", [])],
         grid_results=[_grid_result_from_dict(g) for g in d.get("grid_results", [])],
+        display_unit=display_unit,
         edge_snap_enabled=d.get("edge_snap_enabled", False),
         edge_snap_radius=d.get("edge_snap_radius", 15),
     )

@@ -56,6 +56,9 @@ def main(argv: list[str] | None = None) -> int:
     if not Path(image_path).exists():
         print(f"Error: image not found: {image_path}", file=sys.stderr)
         return 1
+    if args.snap_radius <= 0:
+        print("Error: --snap-radius must be positive", file=sys.stderr)
+        return 1
 
     # Import here to avoid slow startup for --help / --version
     from .gui.app import MeasurementApp
@@ -69,10 +72,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    if args.edge_snap:
-        app.session.edge_snap_enabled = True
     if args.snap_radius != 15:
-        app.session.edge_snap_radius = args.snap_radius
+        app.set_snap_radius(args.snap_radius)
+    if args.edge_snap:
+        app.set_edge_snap_enabled(True)
 
     app.show()
     return 0

@@ -92,6 +92,8 @@ class CalibrationLine:
     p1: Vertex
     known_length: float  # in `unit`
     unit: Unit = Unit.MILLIMETER
+    endpoint_sigma: float = 0.5  # localization uncertainty per endpoint (px)
+    source: str = "manual"  # "manual" | "pad_pitch"
 
     @property
     def pixel_length(self) -> float:
@@ -165,6 +167,12 @@ class MeasurementResult:
     # Perimeter
     perimeter_physical: float = 0.0
     perimeter_uncertainty: float = 0.0
+    # Minimum-area bounding rectangle (oriented bounding box)
+    bbox_width_physical: float = 0.0
+    bbox_height_physical: float = 0.0
+    bbox_angle_deg: float = 0.0
+    bbox_width_uncertainty: float = 0.0
+    bbox_height_uncertainty: float = 0.0
 
 
 @dataclass
@@ -191,5 +199,6 @@ class Session:
     polygons: List[Polygon] = field(default_factory=list)
     results: List[MeasurementResult] = field(default_factory=list)
     grid_results: List[GridResult] = field(default_factory=list)
+    display_unit: Unit = Unit.MILLIMETER
     edge_snap_enabled: bool = False
     edge_snap_radius: int = 15

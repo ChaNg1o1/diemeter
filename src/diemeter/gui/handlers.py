@@ -38,7 +38,7 @@ class CanvasEventHandler:
             return
 
         # Snap to edge if enabled
-        x, y = self.app.maybe_snap(x, y)
+        x, y, snapped, confidence = self.app.maybe_snap(x, y)
 
         mode = self.app.state.mode
 
@@ -49,11 +49,13 @@ class CanvasEventHandler:
         elif mode == Mode.CALIBRATE_RECT:
             self._handle_calibrate_rect_click(x, y)
         elif mode == Mode.POLYGON_DRAW:
-            self._handle_polygon_draw_click(x, y)
+            self._handle_polygon_draw_click(x, y, snapped, confidence)
         elif mode == Mode.POLYGON_EDIT:
             self._handle_polygon_edit_click(x, y)
         elif mode == Mode.GRID_DETECT:
             self._handle_grid_detect_click(x, y)
+        elif mode == Mode.CALIBRATE_PAD_PITCH:
+            self._handle_pad_pitch_click(x, y)
 
     def on_release(self, button: Qt.MouseButton, scene_pos: QPointF) -> None:
         state = self.app.state
@@ -70,6 +72,14 @@ class CanvasEventHandler:
             ):
                 state.roi_end = (scene_pos.x(), scene_pos.y())
                 self.app.run_grid_detect()
+
+        elif mode == Mode.CALIBRATE_PAD_PITCH:
+            if (
+                button == Qt.MouseButton.LeftButton
+                and state.roi_start is not None
+            ):
+                state.roi_end = (scene_pos.x(), scene_pos.y())
+                self.app.run_pad_pitch_calibrate()
 
     def on_move(self, scene_pos: QPointF) -> None:
         x, y = scene_pos.x(), scene_pos.y()
@@ -108,6 +118,10 @@ class CanvasEventHandler:
 
         # ROI rectangle preview
         elif mode == Mode.GRID_DETECT and state.roi_start is not None:
+            state.roi_end = (x, y)
+            self.app.redraw()
+
+        elif mode == Mode.CALIBRATE_PAD_PITCH and state.roi_start is not None:
             state.roi_end = (x, y)
             self.app.redraw()
 
@@ -171,7 +185,7 @@ class CanvasEventHandler:
                 tr("ctx.cancel"), lambda: app.switch_mode(Mode.VIEW)
             )
 
-        elif mode == Mode.GRID_DETECT:
+        elif mode in (Mode.GRID_DETECT, Mode.CALIBRATE_PAD_PITCH):
             menu.addAction(
                 tr("ctx.cancel"), lambda: app.switch_mode(Mode.VIEW)
             )
@@ -204,8 +218,19 @@ class CanvasEventHandler:
         else:
             self.app.redraw()
 
-    def _handle_polygon_draw_click(self, x: float, y: float) -> None:
-        self.app.add_polygon_vertex(x, y)
+    def _handle_polygon_draw_click(
+        self,
+        x: float,
+        y: float,
+        snapped: bool,
+        confidence: float,
+    ) -> None:
+        self.app.add_polygon_vertex(
+            x,
+            y,
+            snapped=snapped,
+            confidence=confidence,
+        )
 
     def _handle_polygon_edit_click(self, x: float, y: float) -> None:
         vi = self.app.find_nearest_vertex(x, y)
@@ -221,5 +246,9 @@ class CanvasEventHandler:
                 self.app.redraw()
 
     def _handle_grid_detect_click(self, x: float, y: float) -> None:
+        self.app.state.roi_start = (x, y)
+        self.app.state.roi_end = None
+
+    def _handle_pad_pitch_click(self, x: float, y: float) -> None:
         self.app.state.roi_start = (x, y)
         self.app.state.roi_end = None

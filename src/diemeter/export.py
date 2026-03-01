@@ -27,6 +27,11 @@ def results_to_csv(results: List[MeasurementResult]) -> str:
         "area_uncertainty_ppu",
         "perimeter_physical",
         "perimeter_uncertainty",
+        "bbox_width_physical",
+        "bbox_height_physical",
+        "bbox_angle_deg",
+        "bbox_width_uncertainty",
+        "bbox_height_uncertainty",
         "unit",
         "n_vertices",
     ])
@@ -40,6 +45,11 @@ def results_to_csv(results: List[MeasurementResult]) -> str:
             f"{r.area_uncertainty_ppu:.6f}",
             f"{r.perimeter_physical:.6f}",
             f"{r.perimeter_uncertainty:.6f}",
+            f"{r.bbox_width_physical:.6f}",
+            f"{r.bbox_height_physical:.6f}",
+            f"{r.bbox_angle_deg:.2f}",
+            f"{r.bbox_width_uncertainty:.6f}",
+            f"{r.bbox_height_uncertainty:.6f}",
             r.unit.value,
             r.n_vertices,
         ])
@@ -96,9 +106,15 @@ def export_results(
     suffix = path.suffix.lower()
 
     if suffix == ".csv":
-        content = results_to_csv(results)
+        sections: List[str] = []
+        measurements_csv = results_to_csv(results).strip()
+        if measurements_csv:
+            sections.append(measurements_csv)
         if grid_results:
-            content += "\n" + grid_results_to_csv(grid_results)
+            grid_csv = grid_results_to_csv(grid_results).strip()
+            if grid_csv:
+                sections.append(grid_csv)
+        content = "\n".join(sections)
     elif suffix == ".json":
         data = {
             "measurements": [_result_to_dict(r) for r in results],

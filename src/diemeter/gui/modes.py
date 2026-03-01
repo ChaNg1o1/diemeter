@@ -12,6 +12,7 @@ class Mode(enum.Enum):
     VIEW = "view"
     CALIBRATE_LINE = "calibrate_line"
     CALIBRATE_RECT = "calibrate_rect"
+    CALIBRATE_PAD_PITCH = "calibrate_pad_pitch"
     POLYGON_DRAW = "polygon_draw"
     POLYGON_EDIT = "polygon_edit"
     GRID_DETECT = "grid_detect"

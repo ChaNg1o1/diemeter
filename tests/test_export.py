@@ -13,7 +13,7 @@ from diemeter.export import (
     results_to_csv,
     results_to_json,
 )
-from diemeter.model import MeasurementResult, Unit
+from diemeter.model import GridResult, MeasurementResult, Unit
 
 
 def _make_result():
@@ -61,3 +61,20 @@ class TestResultsToJSON:
         data = json.loads(json_str)
         assert data[0]["area_uncertainty_vertex"] == 3.0
         assert data[0]["perimeter_physical"] == 40.0
+
+
+class TestExportResults:
+    def test_csv_grid_only_no_leading_blank_line(self, tmp_path):
+        path = tmp_path / "out.csv"
+        grid = GridResult(
+            pitch_x=100.0,
+            pitch_y=100.0,
+            pitch_x_physical=10.0,
+            pitch_y_physical=10.0,
+            angle_deg=0.0,
+            confidence=0.8,
+            unit=Unit.MILLIMETER,
+        )
+        export_results(path, results=[], grid_results=[grid])
+        content = path.read_text(encoding="utf-8")
+        assert content.startswith("pitch_x_px,")

@@ -33,8 +33,33 @@ def compute_edges(
         grad_mag: gradient magnitude
         grad_dir: gradient direction in radians
     """
-    if len(image.shape) == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if image is None or not isinstance(image, np.ndarray) or image.size == 0:
+        raise ValueError("image must be a non-empty numpy array")
+    if image.ndim not in (2, 3):
+        raise ValueError("image must be 2D grayscale or 3D color array")
+    try:
+        low_threshold = float(low_threshold)
+        high_threshold = float(high_threshold)
+    except (TypeError, ValueError):
+        raise ValueError("Canny thresholds must be numeric") from None
+    if not np.isfinite(low_threshold) or not np.isfinite(high_threshold):
+        raise ValueError("Canny thresholds must be finite")
+    if low_threshold < 0 or high_threshold < 0:
+        raise ValueError("Canny thresholds must be non-negative")
+    if low_threshold > high_threshold:
+        raise ValueError("low_threshold must be <= high_threshold")
+    if not isinstance(blur_ksize, (int, np.integer)):
+        raise ValueError("blur_ksize must be a positive odd integer")
+    if blur_ksize <= 0 or blur_ksize % 2 == 0:
+        raise ValueError("blur_ksize must be a positive odd integer")
+
+    if image.ndim == 3:
+        if image.shape[2] == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        elif image.shape[2] == 4:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGRA2GRAY)
+        else:
+            raise ValueError("color image must have 3 (BGR) or 4 (BGRA) channels")
     else:
         gray = image
 
@@ -204,6 +229,10 @@ class EdgeDetector:
         self._subpixel_points = devernay_subpixel(
             self._edges, self._grad_mag, self._grad_dir
         )
+        self._points_array = None
+        self._confidences = None
+        self._kdtree = None
+        self._max_grad = 0.0
         if self._subpixel_points:
             pts = np.array([(p[0], p[1]) for p in self._subpixel_points])
             conf = np.array([p[2] for p in self._subpixel_points])
@@ -232,10 +261,26 @@ class EdgeDetector:
         (sub_x, sub_y, confidence) or None
             Nearest sub-pixel edge point, or None if none within radius.
         """
+        try:
+            x = float(x)
+            y = float(y)
+            radius = float(radius)
+        except (TypeError, ValueError):
+            raise ValueError("x, y and radius must be numeric") from None
+
+        if not np.isfinite(x) or not np.isfinite(y):
+            raise ValueError("x and y must be finite")
+        if not np.isfinite(radius) or radius < 0:
+            raise ValueError("radius must be non-negative")
+
         if self._points_array is None:
             self.compute_subpixel()
 
-        if self._kdtree is None or self._points_array is None:
+        if (
+            self._kdtree is None
+            or self._points_array is None
+            or self._confidences is None
+        ):
             return None
 
         # KD-tree ball query

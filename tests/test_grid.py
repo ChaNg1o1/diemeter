@@ -38,6 +38,10 @@ class TestAutocorrelation2D:
         # Check that acorr[0, 50] > threshold
         assert acorr[0, 50] > 0.3
 
+    def test_empty_image_raises(self):
+        with pytest.raises(ValueError, match="non-empty"):
+            autocorrelation_2d(np.zeros((0, 10), dtype=np.uint8))
+
 
 class TestSuppressCenter:
     def test_center_zeroed(self, checkerboard_50):
@@ -128,3 +132,15 @@ class TestDetectGrid:
         # Should handle color images
         if result is not None:
             assert result.pitch_x > 0
+
+    def test_invalid_roi_out_of_bounds_raises(self, checkerboard_50):
+        with pytest.raises(ValueError, match="within image bounds"):
+            detect_grid(checkerboard_50, roi=(180, 180, 50, 50), min_pitch=20)
+
+    def test_invalid_roi_size_raises(self, checkerboard_50):
+        with pytest.raises(ValueError, match="width and height must be positive"):
+            detect_grid(checkerboard_50, roi=(0, 0, 0, 20), min_pitch=20)
+
+    def test_invalid_min_pitch_raises(self, checkerboard_50):
+        with pytest.raises(ValueError, match="min_pitch"):
+            detect_grid(checkerboard_50, min_pitch=0)

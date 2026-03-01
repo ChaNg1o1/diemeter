@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: #3b82f6;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      --color-text: #374151;
+      --color-text-muted: #6b7280;
+      --color-bg: #ffffff;
+      --color-bg-muted: #f9fafb;
+      --color-border: #e5e7eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-text: #f3f4f6;
+        --color-text-muted: #9ca3af;
+        --color-bg: #111827;
+        --color-bg-muted: #1f2937;
+        --color-border: #374151;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 2rem;
+    }
+
+    .report {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Brand Header */
+    .brand-header {
+      background: var(--color-bg-muted);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-header .powered-by {
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Paper Header */
+    .paper-header { margin-bottom: 1.5rem; }
+    .paper-header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .paper-header .meta {
+      display: flex;
+      gap: 1rem;
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+      flex-wrap: wrap;
+    }
+    .paper-header .categories {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .paper-header .category {
+      background: var(--color-bg-muted);
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+    }
+
+    /* Authors */
+    .authors { margin-bottom: 1rem; color: var(--color-text); }
+    .authors .affiliation { color: var(--color-text-muted); }
+
+    /* Section */
+    .section { margin-bottom: 1.5rem; }
+    .section h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 2px solid var(--color-border);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+
+    /* Abstract */
+    .abstract {
+      color: var(--color-text);
+      text-align: justify;
+    }
+    .abstract mark {
+      background: #fef08a;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    /* Contribution List */
+    .contribution-list { list-style: decimal; padding-left: 1.5rem; }
+    .contribution-list li { margin-bottom: 0.75rem; }
+    .contribution-list .badge {
+      background: var(--color-primary);
+      color: white;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-right: 0.5rem;
+    }
+    .contribution-list .description { color: var(--color-text-muted); }
+
+    /* Method Overview */
+    .method-overview { display: flex; flex-direction: column; gap: 1rem; }
+    .method-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .method-step .number {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .method-step .content strong { display: block; }
+    .method-step .content p { margin: 0.25rem 0 0; color: var(--color-text-muted); }
+
+    /* Highlight */
+    .highlight {
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .highlight.quote { border-left: 4px solid var(--color-primary); background: #eff6ff; }
+    .highlight.important { border-left: 4px solid var(--color-warning); background: #fffbeb; }
+    .highlight.warning { border-left: 4px solid var(--color-danger); background: #fef2f2; }
+    .highlight.code { border-left: 4px solid var(--color-success); background: #ecfdf5; font-family: monospace; }
+    .highlight .source { margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-text-muted); }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .metric {
+      padding: 1rem;
+      background: var(--color-bg-muted);
+      border-radius: 8px;
+      text-align: center;
+    }
+    .metric .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .metric .value .suffix { font-size: 1rem; color: var(--color-text-muted); }
+    .metric .value .trend-up { color: var(--color-success); }
+    .metric .value .trend-down { color: var(--color-danger); }
+    .metric .label { color: var(--color-text-muted); font-size: 0.875rem; }
+
+    /* Link Group */
+    .link-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--color-primary);
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+    .link-button:hover { opacity: 0.9; }
+
+    /* Brand Footer */
+    .brand-footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    /* Card */
+    .card {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .card.shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card.padding-sm { padding: 0.5rem; }
+    .card.padding-md { padding: 1rem; }
+    .card.padding-lg { padding: 1.5rem; }
+
+    /* Figure / Image */
+    .figure {
+      margin: 1.5rem 0;
+      text-align: center;
+    }
+    .figure img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid var(--color-border);
+    }
+    .figure .images {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .figure figcaption {
+      margin-top: 0.75rem;
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+    .figure .label {
+      font-weight: bold;
+      color: var(--color-text);
+    }
+
+    .image {
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .image .caption {
+      margin-top: 0.5rem;
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Formula (LaTeX) */
+    .formula {
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .formula.block {
+      padding: 1rem;
+      background: var(--color-bg-muted);
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .formula .label {
+      float: right;
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+    .formula code {
+      font-family: 'Computer Modern', 'Latin Modern Math', serif;
+      font-size: 1.1em;
+    }
+
+    /* Prose (Markdown) */
+    .prose {
+      line-height: 1.75;
+    }
+    .prose p { margin-bottom: 1rem; }
+    .prose h3 { margin: 1.5rem 0 0.75rem; font-size: 1.1rem; }
+    .prose h4 { margin: 1.25rem 0 0.5rem; font-size: 1rem; }
+    .prose ul, .prose ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.25rem; }
+    .prose code {
+      background: var(--color-bg-muted);
+      padding: 0.125rem 0.375rem;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    .prose strong { font-weight: 600; }
+    .prose em { font-style: italic; }
+
+    /* Callout */
+    .callout {
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      border-left: 4px solid;
+    }
+    .callout.info { border-color: var(--color-primary); background: #eff6ff; }
+    .callout.tip { border-color: var(--color-success); background: #ecfdf5; }
+    .callout.warning { border-color: var(--color-warning); background: #fffbeb; }
+    .callout.important { border-color: var(--color-danger); background: #fef2f2; }
+    .callout.note { border-color: #8b5cf6; background: #f5f3ff; }
+    @media (prefers-color-scheme: dark) {
+      .callout.info { background: #1e3a5f; }
+      .callout.tip { background: #1a3d2e; }
+      .callout.warning { background: #3d3219; }
+      .callout.important { background: #3d1f1f; }
+      .callout.note { background: #2d2350; }
+    }
+    .callout .callout-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .callout .callout-title::before {
+      content: 'ℹ️';
+    }
+    .callout.tip .callout-title::before { content: '💡'; }
+    .callout.warning .callout-title::before { content: '⚠️'; }
+    .callout.important .callout-title::before { content: '🔴'; }
+    .callout.note .callout-title::before { content: '📝'; }
+
+    /* Definition List */
+    .definition-list {
+      margin: 1rem 0;
+    }
+    .definition-list dl {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .definition-list dt {
+      font-weight: bold;
+      color: var(--color-primary);
+    }
+    .definition-list dd {
+      margin-left: 1rem;
+      color: var(--color-text);
+    }
+
+    /* Theorem */
+    .theorem {
+      margin: 1.5rem 0;
+      padding: 1rem 1.25rem;
+      background: var(--color-bg-muted);
+      border-radius: 8px;
+      border-left: 4px solid var(--color-primary);
+    }
+    .theorem .theorem-header {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: var(--color-primary);
+    }
+    .theorem.lemma { border-color: #8b5cf6; }
+    .theorem.lemma .theorem-header { color: #8b5cf6; }
+    .theorem.proposition { border-color: var(--color-success); }
+    .theorem.proposition .theorem-header { color: var(--color-success); }
+    .theorem.definition { border-color: var(--color-warning); }
+    .theorem.definition .theorem-header { color: var(--color-warning); }
+
+    /* Algorithm */
+    .algorithm {
+      margin: 1.5rem 0;
+      background: var(--color-bg-muted);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .algorithm .algorithm-title {
+      background: var(--color-primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      font-weight: bold;
+    }
+    .algorithm .algorithm-body {
+      padding: 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9rem;
+    }
+    .algorithm .line {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .algorithm .line-number {
+      color: var(--color-text-muted);
+      user-select: none;
+      width: 2rem;
+      text-align: right;
+    }
+    .algorithm .line-code {
+      flex: 1;
+    }
+    .algorithm .indent-1 { padding-left: 1.5rem; }
+    .algorithm .indent-2 { padding-left: 3rem; }
+    .algorithm .indent-3 { padding-left: 4.5rem; }
+    .algorithm .algorithm-caption {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* Results Table */
+    .results-table {
+      margin: 1.5rem 0;
+      overflow-x: auto;
+    }
+    .results-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .results-table th,
+    .results-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .results-table th {
+      background: var(--color-bg-muted);
+      font-weight: bold;
+    }
+    .results-table th.highlight {
+      background: var(--color-primary);
+      color: white;
+    }
+    .results-table td.highlight {
+      background: #fef08a;
+      font-weight: bold;
+    }
+    @media (prefers-color-scheme: dark) {
+      .results-table td.highlight {
+        background: #854d0e;
+      }
+    }
+    .results-table caption {
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      text-align: left;
+    }
+
+    /* Code Block */
+    .code-block {
+      margin: 1rem 0;
+      background: #1f2937;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .code-block .code-title {
+      background: #111827;
+      color: #9ca3af;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #374151;
+    }
+    .code-block pre {
+      padding: 1rem;
+      overflow-x: auto;
+      color: #e5e7eb;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .code-block .line-numbers {
+      display: inline-block;
+      margin-right: 1rem;
+      color: #6b7280;
+      user-select: none;
+      text-align: right;
+    }
+
+    /* Table (generic) */
+    .table-wrapper {
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    .table-wrapper table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-wrapper th,
+    .table-wrapper td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .table-wrapper th {
+      background: var(--color-bg-muted);
+      font-weight: bold;
+    }
+    .table-wrapper.striped tr:nth-child(even) td {
+      background: var(--color-bg-muted);
+    }
+    .table-wrapper.compact th,
+    .table-wrapper.compact td {
+      padding: 0.375rem 0.5rem;
+    }
+
+    /* i18n language switching */
+    html[lang="en"] .i18n-zh { display: none; }
+    html[lang="zh"] .i18n-en { display: none; }
+
+    .lang-switcher {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1000;
+      display: flex;
+      gap: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .lang-switcher button {
+      padding: 0.375rem 0.75rem;
+      border: none;
+      background: var(--color-bg);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+    .lang-switcher button:hover {
+      background: var(--color-bg-muted);
+    }
+    .lang-switcher button.active {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    /* Print styles */
+    @media print {
+      body { padding: 0; }
+      .link-group { display: none; }
+      .lang-switcher { display: none; }
+    }
+    /* Broken image fallback */
+    .image img[data-failed],
+    .figure img[data-failed] {
+      display: none;
+    }
+    .img-fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-bg-muted);
+      border: 2px dashed var(--color-border);
+      border-radius: 8px;
+      padding: 2rem;
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+      min-height: 200px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* 2026 visual refresh */
+    :root {
+      --color-primary: #0f766e;
+      --color-primary-strong: #115e59;
+      --color-success: #059669;
+      --color-warning: #d97706;
+      --color-danger: #dc2626;
+      --color-text: #0f172a;
+      --color-text-muted: #475569;
+      --color-bg: #f3f6fb;
+      --color-bg-muted: #e9eef6;
+      --color-surface: #ffffff;
+      --color-surface-alt: #f8fbff;
+      --color-border: rgba(15, 23, 42, 0.12);
+      --color-highlight: #fef08a;
+      --color-shadow: rgba(15, 23, 42, 0.14);
+      --color-shadow-soft: rgba(15, 23, 42, 0.08);
+      --color-code-bg: #0f172a;
+      --color-code-surface: #111b2f;
+      --color-code-text: #dbe7ff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-primary: #22c1aa;
+        --color-primary-strong: #34d3bd;
+        --color-success: #34d399;
+        --color-warning: #fbbf24;
+        --color-danger: #f87171;
+        --color-text: #e5edf7;
+        --color-text-muted: #9db0c8;
+        --color-bg: #050912;
+        --color-bg-muted: #0f1727;
+        --color-surface: #0b1322;
+        --color-surface-alt: #101b30;
+        --color-border: rgba(148, 163, 184, 0.3);
+        --color-highlight: #854d0e;
+        --color-shadow: rgba(2, 6, 23, 0.62);
+        --color-shadow-soft: rgba(2, 6, 23, 0.42);
+        --color-code-bg: #020712;
+        --color-code-surface: #0d172c;
+        --color-code-text: #dbe7ff;
+      }
+    }
+
+    body {
+      font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0.01em;
+      color: var(--color-text);
+      background:
+        radial-gradient(1200px 520px at 8% -14%, rgba(14, 165, 233, 0.2), transparent 60%),
+        radial-gradient(1000px 520px at 95% -10%, rgba(16, 185, 129, 0.18), transparent 58%),
+        var(--color-bg);
+      min-height: 100vh;
+      padding: clamp(1rem, 2vw, 2.5rem);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background:
+          radial-gradient(1200px 540px at 10% -14%, rgba(14, 165, 233, 0.14), transparent 64%),
+          radial-gradient(1000px 520px at 90% -8%, rgba(34, 197, 170, 0.14), transparent 62%),
+          var(--color-bg);
+      }
+    }
+
+    a {
+      color: var(--color-primary);
+      text-underline-offset: 0.14em;
+    }
+
+    a:hover {
+      color: var(--color-primary-strong);
+    }
+
+    .report {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: clamp(1.25rem, 2.4vw, 2.75rem);
+      background: linear-gradient(160deg, var(--color-surface) 0%, var(--color-surface-alt) 100%);
+      border: 1px solid var(--color-border);
+      border-radius: 24px;
+      box-shadow: 0 30px 70px var(--color-shadow), 0 8px 24px var(--color-shadow-soft);
+    }
+
+    .brand-header {
+      background: linear-gradient(125deg, rgba(15, 118, 110, 0.12), rgba(14, 165, 233, 0.08));
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .brand-header > span:first-child {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand-header .powered-by {
+      color: var(--color-text-muted);
+      font-size: 0.84rem;
+    }
+
+    .paper-header {
+      margin-bottom: 1.6rem;
+    }
+
+    .paper-header h1 {
+      font-size: clamp(1.6rem, 2.6vw, 2.35rem);
+      line-height: 1.24;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.75rem;
+    }
+
+    .paper-header .meta {
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      font-size: 0.84rem;
+    }
+
+    .paper-header .meta span {
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+    }
+
+    .paper-header .categories,
+    .categories {
+      margin-top: 0.85rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .paper-header .category,
+    .categories .category {
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      padding: 0.2rem 0.62rem;
+      font-size: 0.75rem;
+      color: var(--color-text);
+      text-decoration: none;
+    }
+
+    .authors {
+      margin-bottom: 1.2rem;
+      color: var(--color-text);
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.72rem 0.9rem;
+    }
+
+    .section {
+      margin-bottom: 1.8rem;
+    }
+
+    .section h2 {
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 0.7rem;
+      margin-bottom: 1rem;
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .section h2 > span:first-child {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 999px;
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      font-size: 0.85rem;
+    }
+
+    .abstract {
+      color: var(--color-text);
+      font-size: 1.01rem;
+    }
+
+    .abstract mark {
+      background: var(--color-highlight);
+      border-radius: 4px;
+      padding: 0 0.2rem;
+    }
+
+    .contribution-list {
+      list-style: decimal;
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .contribution-list li {
+      margin-bottom: 0;
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.8rem 0.95rem;
+    }
+
+    .contribution-list li::marker {
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+
+    .contribution-list .badge {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .method-overview {
+      gap: 0.85rem;
+    }
+
+    .method-step {
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.75rem 0.9rem;
+    }
+
+    .method-step .number {
+      width: 1.9rem;
+      height: 1.9rem;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+      font-size: 0.84rem;
+      box-shadow: 0 6px 14px rgba(15, 118, 110, 0.22);
+    }
+
+    .highlight {
+      border-left: none;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      background: var(--color-bg-muted);
+    }
+
+    .highlight.quote {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: rgba(14, 165, 233, 0.28);
+    }
+
+    .highlight.important {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .highlight.warning {
+      background: rgba(239, 68, 68, 0.11);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .highlight.code {
+      background: rgba(16, 185, 129, 0.11);
+      border-color: rgba(16, 185, 129, 0.32);
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    }
+
+    .metrics-grid {
+      margin: 1.1rem 0;
+      gap: 0.8rem;
+    }
+
+    .metric {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      padding: 1rem 0.8rem;
+      box-shadow: 0 8px 18px var(--color-shadow-soft);
+    }
+
+    .metric .value {
+      font-size: 1.68rem;
+      letter-spacing: -0.02em;
+      font-weight: 800;
+    }
+
+    .link-group {
+      gap: 0.6rem;
+      align-items: flex-start;
+      margin: 1rem 0;
+    }
+
+    .link-button {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 0.5rem 0.92rem;
+      font-weight: 600;
+      box-shadow: 0 10px 22px rgba(15, 118, 110, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    .link-button:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 24px rgba(15, 118, 110, 0.28);
+    }
+
+    .brand-footer {
+      margin-top: 2.2rem;
+      padding-top: 1.1rem;
+      border-top: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      font-size: 0.84rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .brand-footer p:first-child {
+      border: 1px solid var(--color-border);
+      background: var(--color-bg-muted);
+      border-radius: 10px;
+      padding: 0.55rem 0.72rem;
+      color: var(--color-text);
+    }
+
+    .grid {
+      gap: 0.85rem;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+    }
+
+    .card.shadow {
+      box-shadow: 0 10px 26px var(--color-shadow-soft);
+    }
+
+    .figure img,
+    .image img {
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      box-shadow: 0 8px 20px var(--color-shadow-soft);
+    }
+
+    .figure .images {
+      gap: 0.85rem;
+    }
+
+    .figure figcaption,
+    .image .caption {
+      color: var(--color-text-muted);
+      font-size: 0.82rem;
+    }
+
+    .formula {
+      margin: 1.15rem 0;
+    }
+
+    .formula.block {
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .formula .label {
+      color: var(--color-text-muted);
+      font-size: 0.8rem;
+    }
+
+    .formula code {
+      font-size: 1.05rem;
+    }
+
+    .prose {
+      color: var(--color-text);
+      line-height: 1.8;
+    }
+
+    .prose code {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 0.12rem 0.42rem;
+      font-size: 0.86em;
+    }
+
+    .callout {
+      border-left: none;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      background: var(--color-bg-muted);
+    }
+
+    .callout.info {
+      border-color: rgba(14, 165, 233, 0.3);
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .callout.tip {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .callout.warning {
+      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .callout.important {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .callout.note {
+      border-color: rgba(148, 163, 184, 0.45);
+      background: rgba(148, 163, 184, 0.14);
+    }
+
+    .definition-list dt {
+      color: var(--color-text);
+      font-weight: 700;
+    }
+
+    .definition-list dd {
+      margin-left: 0;
+      padding-left: 0.75rem;
+      border-left: 2px solid var(--color-border);
+      color: var(--color-text-muted);
+    }
+
+    .theorem {
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 12px;
+      background: var(--color-bg-muted);
+      padding: 0.95rem 1.15rem;
+    }
+
+    .theorem .theorem-header {
+      color: var(--color-primary-strong);
+    }
+
+    .theorem.lemma {
+      border-left-color: #0284c7;
+    }
+
+    .theorem.lemma .theorem-header {
+      color: #0284c7;
+    }
+
+    .theorem.proposition {
+      border-left-color: var(--color-success);
+    }
+
+    .theorem.proposition .theorem-header {
+      color: var(--color-success);
+    }
+
+    .theorem.definition {
+      border-left-color: var(--color-warning);
+    }
+
+    .theorem.definition .theorem-header {
+      color: var(--color-warning);
+    }
+
+    .algorithm {
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--color-bg-muted);
+    }
+
+    .algorithm .algorithm-title {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+    }
+
+    .algorithm .algorithm-body {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      background: var(--color-surface);
+    }
+
+    .results-table,
+    .table-wrapper {
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      background: var(--color-surface);
+      overflow-x: auto;
+    }
+
+    .results-table table,
+    .table-wrapper table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 640px;
+    }
+
+    .results-table th,
+    .results-table td,
+    .table-wrapper th,
+    .table-wrapper td {
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.72rem 0.8rem;
+    }
+
+    .results-table th,
+    .table-wrapper th {
+      background: var(--color-bg-muted);
+      font-weight: 700;
+      font-size: 0.84rem;
+      letter-spacing: 0.01em;
+    }
+
+    .results-table td.highlight {
+      background: rgba(14, 165, 233, 0.16);
+    }
+
+    .results-table caption,
+    .table-wrapper caption {
+      display: block;
+      margin: 0.6rem 0 0.2rem;
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      padding-left: 0.15rem;
+      text-align: left;
+    }
+
+    .code-block {
+      background: var(--color-code-bg);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 14px;
+      box-shadow: 0 16px 28px var(--color-shadow-soft);
+    }
+
+    .code-block .code-title {
+      background: var(--color-code-surface);
+      color: #b7c8e7;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+      font-weight: 600;
+    }
+
+    .code-block pre {
+      color: var(--color-code-text);
+      font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.84rem;
+    }
+
+    .code-block .line-numbers {
+      color: #7487a6;
+    }
+
+    .lang-switcher {
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 26px var(--color-shadow-soft);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .lang-switcher {
+        background: rgba(11, 19, 34, 0.86);
+      }
+    }
+
+    .lang-switcher button {
+      border-radius: 999px;
+      background: transparent;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.34rem 0.72rem;
+      min-width: 2.65rem;
+      color: var(--color-text-muted);
+      transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .lang-switcher button:hover {
+      background: var(--color-bg-muted);
+      transform: translateY(-1px);
+    }
+
+    .lang-switcher button.active {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+      color: #ffffff;
+    }
+
+    .img-fallback {
+      border: 1px dashed var(--color-border);
+      border-radius: 12px;
+      background: var(--color-bg-muted);
+      color: var(--color-text-muted);
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 0.9rem;
+      }
+
+      .report {
+        border-radius: 18px;
+        padding: 1.05rem;
+      }
+
+      .lang-switcher {
+        position: sticky;
+        top: 0.6rem;
+        right: auto;
+        margin: 0 0 0.7rem auto;
+        width: max-content;
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+
+      .grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .brand-header {
+        align-items: flex-start;
+      }
+
+      .paper-header .meta span {
+        width: 100%;
+      }
+
+      .link-group {
+        flex-direction: column;
+      }
+
+      .link-button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .method-step {
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      .results-table table,
+      .table-wrapper table {
+        min-width: 520px;
+      }
+    }
+
+    /* 2026 v2 editorial refresh */
+    :root {
+      --color-primary: #0b57d0;
+      --color-primary-strong: #003eaa;
+      --color-success: #1b8f5c;
+      --color-warning: #b16a1b;
+      --color-danger: #c23a3a;
+      --color-text: #10131a;
+      --color-text-muted: #565f6f;
+      --color-bg: #f3f3ef;
+      --color-bg-muted: #e9e9e2;
+      --color-surface: #fcfcf8;
+      --color-surface-alt: #f7f7f2;
+      --color-border: #d4d6cf;
+      --color-highlight: #f2dc72;
+      --color-shadow: rgba(16, 19, 26, 0.12);
+      --color-shadow-soft: rgba(16, 19, 26, 0.06);
+      --color-code-bg: #0c1220;
+      --color-code-surface: #121a2e;
+      --color-code-text: #dbe4ff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-primary: #8ab4ff;
+        --color-primary-strong: #aac7ff;
+        --color-success: #4ecb92;
+        --color-warning: #f2be6d;
+        --color-danger: #ff8b8b;
+        --color-text: #ebf0fb;
+        --color-text-muted: #9ea9be;
+        --color-bg: #0b0e13;
+        --color-bg-muted: #151a22;
+        --color-surface: #0f141d;
+        --color-surface-alt: #141b26;
+        --color-border: #2a313d;
+        --color-highlight: #6b5316;
+        --color-shadow: rgba(0, 0, 0, 0.55);
+        --color-shadow-soft: rgba(0, 0, 0, 0.35);
+        --color-code-bg: #040913;
+        --color-code-surface: #0c1424;
+        --color-code-text: #dbe4ff;
+      }
+    }
+
+    body {
+      font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+      line-height: 1.72;
+      letter-spacing: 0.005em;
+      background: var(--color-bg);
+      padding: clamp(1rem, 2.3vw, 2.8rem);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(16, 19, 26, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 19, 26, 0.03) 1px, transparent 1px);
+      background-size: 36px 36px;
+      opacity: 0.35;
+      z-index: 0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body::before {
+        background-image:
+          linear-gradient(rgba(235, 240, 251, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(235, 240, 251, 0.04) 1px, transparent 1px);
+        opacity: 0.22;
+      }
+    }
+
+    .report {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      padding: clamp(1.3rem, 2.5vw, 2.9rem);
+      border-radius: 14px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      box-shadow: 0 22px 50px var(--color-shadow);
+    }
+
+    .brand-header {
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-surface-alt);
+      padding: 0.75rem 0.85rem;
+    }
+
+    .brand-header > span:first-child {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.73rem;
+      letter-spacing: 0.06em;
+      text-transform: none;
+      border-radius: 6px;
+      padding: 0.2rem 0.46rem;
+      background: transparent;
+    }
+
+    .brand-header .powered-by {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-header .powered-by a,
+    .brand-header .powered-by a:visited {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .brand-header .powered-by a:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.14em;
+    }
+
+    .paper-header h1 {
+      font-size: clamp(1.75rem, 3vw, 2.55rem);
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+      max-width: 20ch;
+    }
+
+    .paper-header .meta span {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.72rem;
+      border-radius: 6px;
+    }
+
+    .paper-header .categories,
+    .categories {
+      gap: 0.4rem;
+    }
+
+    .paper-header .category,
+    .categories .category {
+      border-radius: 6px;
+      padding: 0.19rem 0.45rem;
+      font-size: 0.7rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 0.02em;
+    }
+
+    .authors {
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+
+    .section h2 {
+      border-bottom: none;
+      font-size: 0.76rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      gap: 0.55rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .section h2::after {
+      content: '';
+      flex: 1 1 auto;
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    .section h2 > span:first-child {
+      width: auto;
+      height: auto;
+      min-width: 1.7rem;
+      border-radius: 6px;
+      padding: 0.16rem 0.36rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.66rem;
+      line-height: 1.2;
+      text-transform: uppercase;
+      background: transparent;
+      border: 1px solid var(--color-border);
+    }
+
+    .contribution-list {
+      list-style: none;
+      padding-left: 0;
+      counter-reset: contribution;
+      gap: 0;
+    }
+
+    .contribution-list li {
+      position: relative;
+      counter-increment: contribution;
+      border: none;
+      border-bottom: 1px dashed var(--color-border);
+      border-radius: 0;
+      background: transparent;
+      padding: 0.86rem 0.1rem 0.9rem 2.5rem;
+    }
+
+    .contribution-list li::before {
+      content: counter(contribution, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 0.88rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.75rem;
+      color: var(--color-primary);
+      letter-spacing: 0.04em;
+    }
+
+    .contribution-list li::marker {
+      content: '';
+    }
+
+    .contribution-list .badge {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      border-radius: 5px;
+      padding: 0.1rem 0.38rem;
+      font-size: 0.66rem;
+      box-shadow: none;
+    }
+
+    .method-step {
+      border: none;
+      border-left: 2px solid var(--color-border);
+      border-radius: 0;
+      background: transparent;
+      padding: 0.28rem 0 0.4rem 0.85rem;
+      gap: 0.7rem;
+    }
+
+    .method-step .number {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.72rem;
+      box-shadow: none;
+    }
+
+    .highlight,
+    .callout,
+    .theorem,
+    .authors {
+      border-radius: 10px;
+    }
+
+    .highlight,
+    .callout {
+      border-left: 1px solid var(--color-border);
+    }
+
+    .highlight.code,
+    .prose code,
+    .formula code,
+    .algorithm .algorithm-body,
+    .algorithm .line-number,
+    .algorithm .line-code,
+    .code-block pre,
+    .code-block .line-numbers,
+    .definition-list dt,
+    .definition-list dd {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+    }
+
+    .metrics-grid {
+      gap: 0.55rem;
+    }
+
+    .metric {
+      border-radius: 8px;
+      box-shadow: none;
+      padding: 0.82rem 0.64rem;
+    }
+
+    .metric .value {
+      font-size: 1.55rem;
+    }
+
+    .metric .label {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .link-button {
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      box-shadow: none;
+      font-size: 0.8rem;
+      padding: 0.5rem 0.72rem;
+      font-weight: 600;
+    }
+
+    .link-button:hover {
+      transform: translateY(-1px);
+      background: var(--color-primary);
+      color: #ffffff;
+      border-color: var(--color-primary);
+      box-shadow: none;
+    }
+
+    .brand-footer {
+      border-top: 1px dashed var(--color-border);
+      gap: 0.35rem;
+    }
+
+    .brand-footer p:first-child {
+      border-style: dashed;
+      background: transparent;
+    }
+
+    .card,
+    .results-table,
+    .table-wrapper,
+    .figure img,
+    .image img,
+    .formula.block,
+    .algorithm,
+    .code-block,
+    .img-fallback {
+      border-radius: 10px;
+    }
+
+    .code-block {
+      box-shadow: none;
+    }
+
+    .code-block .code-title {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.76rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .lang-switcher {
+      border-radius: 9px;
+      padding: 1px;
+      gap: 1px;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .lang-switcher button {
+      border-radius: 7px;
+      min-width: 2.45rem;
+      font-size: 0.72rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 0.03em;
+      transform: none;
+    }
+
+    .lang-switcher button:hover {
+      transform: none;
+    }
+
+    .lang-switcher button.active {
+      background: var(--color-text);
+      color: var(--color-surface);
+    }
+
+    .callout .callout-title::before {
+      content: '';
+      display: none;
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 0.85rem;
+      }
+
+      .report {
+        border-radius: 10px;
+        padding: 1.05rem;
+      }
+
+      .lang-switcher {
+        position: sticky;
+        top: 0.52rem;
+        margin-bottom: 0.7rem;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .paper-header h1 {
+        max-width: none;
+      }
+
+      .section h2 {
+        letter-spacing: 0.12em;
+      }
+
+      .results-table table,
+      .table-wrapper table {
+        min-width: 500px;
+      }
+    }
+
+    /* 2026 v4 wireframe style */
+    :root {
+      --color-primary: #ff4020;
+      --color-primary-strong: #ff4020;
+      --color-success: #2db37a;
+      --color-warning: #d08b3a;
+      --color-danger: #d65b5b;
+      --color-text: #f2f3f5;
+      --color-text-muted: #9ea3ad;
+      --color-bg: #050608;
+      --color-bg-muted: #0a0d12;
+      --color-surface: #050608;
+      --color-surface-alt: #050608;
+      --color-border: rgba(255, 255, 255, 0.14);
+      --color-highlight: rgba(255, 208, 97, 0.28);
+      --color-shadow: transparent;
+      --color-shadow-soft: transparent;
+      --color-code-bg: #070b14;
+      --color-code-surface: #0d1220;
+      --color-code-text: #d8e2ff;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --color-primary: #e5371a;
+        --color-primary-strong: #e5371a;
+        --color-success: #1b8f5c;
+        --color-warning: #a96a24;
+        --color-danger: #bf4444;
+        --color-text: #151820;
+        --color-text-muted: #5f6572;
+        --color-bg: #f6f7f9;
+        --color-bg-muted: #eceef2;
+        --color-surface: #f6f7f9;
+        --color-surface-alt: #f6f7f9;
+        --color-border: rgba(21, 24, 32, 0.18);
+        --color-highlight: rgba(229, 55, 26, 0.16);
+        --color-code-bg: #101724;
+        --color-code-surface: #161f2f;
+        --color-code-text: #e1ebff;
+      }
+    }
+
+    body {
+      font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      display: none;
+    }
+
+    .report {
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .brand-header {
+      margin: 0;
+      min-height: 68px;
+      padding: 0.9rem clamp(1rem, 10vw, 180px);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      border-left: none;
+      border-right: none;
+      border-radius: 0;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.85rem;
+      flex-wrap: nowrap;
+    }
+
+    .brand-header > span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.9rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: transparent;
+    }
+
+    .brand-header > span:first-child::before {
+      content: '';
+      width: 12px;
+      height: 12px;
+      background: var(--color-primary);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .brand-header .powered-by {
+      font-size: 0.8rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 0.02em;
+      color: var(--color-text-muted);
+    }
+
+    .fallback-lang-row {
+      margin: 0;
+      padding: 0.9rem clamp(1rem, 10vw, 180px);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      background: transparent;
+    }
+
+    .fallback-lang-row .lang-switcher {
+      margin-left: 0;
+    }
+
+    .report-hero {
+      margin: 0;
+      padding: clamp(1.2rem, 3.8vw, 3rem) clamp(1rem, 10vw, 180px);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      background: transparent;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.9rem;
+    }
+
+    .hero-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      border: 1px solid var(--color-border);
+      border-radius: 0;
+      padding: 0.32rem 0.74rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.74rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--color-text);
+      background: transparent;
+    }
+
+    .hero-chip-primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #ffffff;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: clamp(2.2rem, 6.3vw, 5.4rem);
+      line-height: 0.97;
+      letter-spacing: -0.04em;
+      max-width: 16ch;
+    }
+
+    .hero-subtitle {
+      margin-top: 1rem;
+      max-width: 58ch;
+      color: var(--color-text-muted);
+      font-size: 1.02rem;
+      line-height: 1.58;
+    }
+
+    .section {
+      margin: 0;
+      padding: clamp(1.25rem, 4vw, 3.2rem) clamp(1rem, 10vw, 180px);
+      border-top: 1px solid var(--color-border);
+      border-radius: 0;
+    }
+
+    .section:last-of-type {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .section h2 {
+      margin-bottom: 1.25rem;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      gap: 0.6rem;
+    }
+
+    .section h2::after {
+      display: none;
+    }
+
+    .section h2 > span:first-child {
+      width: auto;
+      height: auto;
+      min-width: 1.8rem;
+      border: 1px solid var(--color-border);
+      border-radius: 0;
+      padding: 0.13rem 0.35rem;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.66rem;
+      background: transparent;
+      text-transform: uppercase;
+    }
+
+    .paper-header,
+    .authors,
+    .highlight,
+    .callout,
+    .metric,
+    .card,
+    .table-wrapper,
+    .results-table,
+    .formula.block,
+    .algorithm,
+    .code-block,
+    .img-fallback,
+    .brand-footer p:first-child,
+    .paper-header .meta span,
+    .paper-header .category,
+    .categories .category,
+    .link-button,
+    .lang-switcher,
+    .lang-switcher button {
+      border-radius: 0;
+    }
+
+    .paper-header {
+      margin: 0;
+      padding: clamp(1.8rem, 5vw, 3.8rem) clamp(1rem, 10vw, 180px);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      background: transparent;
+    }
+
+    .paper-header h1 {
+      font-size: clamp(2.15rem, 5.8vw, 5.1rem);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      margin-bottom: 1rem;
+      max-width: 16ch;
+    }
+
+    .paper-header .meta span,
+    .paper-header .category,
+    .categories .category {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.76rem;
+      letter-spacing: 0.03em;
+    }
+
+    .contribution-list li,
+    .method-step,
+    .metric,
+    .callout,
+    .highlight,
+    .authors,
+    .definition-list dd,
+    .theorem,
+    .algorithm,
+    .table-wrapper,
+    .results-table {
+      border-color: var(--color-border);
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .contribution-list li {
+      border-left: 1px solid var(--color-border);
+      padding-left: 2.2rem;
+    }
+
+    .metric .label,
+    .algorithm .algorithm-title,
+    .code-block .code-title {
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+    }
+
+    .link-button {
+      background: transparent;
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      box-shadow: none;
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .link-button:hover {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #ffffff;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .brand-footer {
+      margin: 0;
+      padding: 1.4rem clamp(1rem, 10vw, 180px) 3.4rem;
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.82rem;
+      gap: 0.45rem;
+    }
+
+    .brand-footer p:first-child {
+      border-style: solid;
+      background: transparent;
+      padding: 0.6rem 0.75rem;
+    }
+
+    .lang-switcher {
+      position: static;
+      top: auto;
+      right: auto;
+      z-index: auto;
+      margin-left: auto;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      padding: 0;
+      gap: 0.9rem;
+    }
+
+    .lang-switcher button {
+      border: none;
+      padding: 0;
+      min-width: 0;
+      background: transparent;
+      color: var(--color-text-muted);
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.9rem;
+      letter-spacing: 0.02em;
+    }
+
+    .lang-switcher button:hover {
+      transform: none;
+      background: transparent;
+      color: var(--color-text);
+    }
+
+    .lang-switcher button.active {
+      background: transparent;
+      color: var(--color-text);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .corner-powered {
+      position: fixed;
+      right: clamp(0.8rem, 2vw, 1.4rem);
+      bottom: clamp(0.8rem, 2vw, 1.35rem);
+      z-index: 1200;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.12rem;
+      min-width: 160px;
+      border: 1px solid var(--color-border);
+      border-radius: 0;
+      background: rgba(10, 13, 18, 0.72);
+      padding: 0.7rem 0.78rem;
+      color: var(--color-text-muted);
+      font-family: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
+      font-size: 0.72rem;
+      text-decoration: none;
+    }
+
+    .corner-powered strong {
+      color: var(--color-text);
+      font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+      font-size: 0.98rem;
+      line-height: 1.12;
+      letter-spacing: 0.01em;
+    }
+
+    .corner-powered:hover {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+    }
+
+    @media (prefers-color-scheme: light) {
+      .corner-powered {
+        background: rgba(246, 247, 249, 0.9);
+      }
+    }
+
+    @media (max-width: 860px) {
+      .brand-header,
+      .fallback-lang-row,
+      .section,
+      .paper-header,
+      .brand-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+
+      .lang-switcher {
+        margin-left: auto;
+      }
+
+      .corner-powered {
+        right: 0.7rem;
+        bottom: 0.7rem;
+        min-width: 136px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .paper-header h1 {
+        font-size: clamp(1.85rem, 11vw, 2.8rem);
+        line-height: 1.02;
+      }
+
+      .hero-chip {
+        min-height: 30px;
+        padding: 0.26rem 0.56rem;
+        font-size: 0.66rem;
+      }
+
+      .hero-title {
+        font-size: clamp(1.85rem, 11vw, 2.8rem);
+        line-height: 1.02;
+      }
+
+      .section {
+        padding-top: 1rem;
+        padding-bottom: 1.35rem;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+
+      .report {
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
+        background: #ffffff;
+      }
+
+      .corner-powered {
+        display: none;
+      }
+
+      .fallback-lang-row {
+        display: none;
+      }
+    }
+  </style>
+  <!-- KaTeX for LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Render LaTeX formulas with KaTeX
+      document.querySelectorAll('.formula[data-latex]').forEach(function(el) {
+        var latex = el.getAttribute('data-latex');
+        var isBlock = el.classList.contains('block');
+        var label = el.querySelector('.label');
+        try {
+          var rendered = katex.renderToString(latex, {
+            displayMode: isBlock,
+            throwOnError: false,
+            trust: true,
+          });
+          var container = el.querySelector('.formula-content');
+          if (container) container.innerHTML = rendered;
+        } catch(e) {
+          // Keep raw LaTeX on error
+        }
+      });
+
+      // i18n language switcher
+      (function() {
+        var saved = localStorage.getItem('json-ui-lang');
+        if (saved && (saved === 'en' || saved === 'zh')) {
+          document.documentElement.lang = saved;
+        }
+        var buttons = document.querySelectorAll('.lang-switcher button');
+        function updateActive() {
+          var lang = document.documentElement.lang || 'en';
+          buttons.forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+          });
+        }
+        buttons.forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var lang = btn.getAttribute('data-lang');
+            document.documentElement.lang = lang;
+            localStorage.setItem('json-ui-lang', lang);
+            updateActive();
+          });
+        });
+        updateActive();
+      })();
+
+      // Handle broken images
+      document.querySelectorAll('.image img, .figure img').forEach(function(img) {
+        img.addEventListener('error', function() {
+          img.setAttribute('data-failed', 'true');
+          var fallback = document.createElement('div');
+          fallback.className = 'img-fallback';
+          fallback.textContent = 'Image: ' + (img.alt || 'unavailable');
+          img.parentNode.insertBefore(fallback, img.nextSibling);
+        });
+      });
+    });
+  </script>
+</head>
+<body>
+  <article class="report">
+    <div class="brand-header">
+        <span>ACTIVE_RESEARCH_REPORT.ARX</span>
+        <div class="lang-switcher">
+    <button data-lang="en" class="active">EN</button>
+    <button data-lang="zh">中文</button>
+  </div>
+      </div>
+<section class="report-hero">
+    <div class="hero-meta"><span class="hero-chip hero-chip-primary">ACTIVE RESEARCH</span><span class="hero-chip">FEB 16, 2026</span></div>
+    <h1 class="hero-title"><span class="i18n-en">Key finding:</span><span class="i18n-zh">核心发现：</span></h1>
+    
+  </section>
+<section class="section">
+        <h2><span>::</span><span class="i18n-en">Overview: Die Shot Photogrammetry</span><span class="i18n-zh">概述：Die Shot 摄影测量</span></h2>
+        <div class="prose"><p><span class="i18n-en">This report investigates industrial photogrammetry and metrology approaches for measuring semiconductor die dimensions from web-sourced die shot images. Die shots are top-down photographs of exposed integrated circuit dies, typically captured via optical microscopy after decapsulation. When sourced from the internet, these images lack camera calibration data (EXIF, intrinsics), making precise measurement a challenging but tractable problem.</p><p><strong>Key finding:</strong> Measuring die dimensions from uncalibrated web images is fundamentally a <strong>single-image planar metrology</strong> problem. Since die shots are essentially 2D top-down views of a flat silicon surface, the full complexity of 3D photogrammetry is unnecessary. The core challenge reduces to establishing a reliable <strong>pixels-per-unit (PPU) scaling factor</strong> from a known reference, correcting for perspective/lens distortion, and quantifying measurement uncertainty.</p><p>The semiconductor reverse engineering industry (ChipWise, TechInsights, SemiAnalysis) routinely performs die area estimation from die shots, using a technique called <strong>die-polygon-capturing</strong> — manually or semi-automatically tracing functional block boundaries. A 2024/2025 paper by van der Linden et al. demonstrated deep learning automation of this process.</span><span class="i18n-zh">本报告调研了从网络 die shot 图片测量半导体芯片尺寸的工业摄影测量与计量方案。Die shot 是封装去除后、通过光学显微镜拍摄的芯片顶视图。网图缺少相机标定信息（EXIF、内参），这使得精确测量具有挑战性，但并非不可解。</p><p><strong>核心发现：</strong> 从未标定网图测量 die 尺寸，本质上是一个<strong>单图像平面计量</strong>问题。由于 die shot 本质是平面硅表面的俯视图，不需要完整的三维摄影测量。核心挑战归结为：建立可靠的<strong>像素/单位（PPU）缩放因子</strong>、校正透视/镜头畸变、量化测量不确定度。</p><p>半导体逆向工程行业（ChipWise、TechInsights、SemiAnalysis）日常执行 die shot 面积估算，使用一种叫 <strong>die-polygon-capturing</strong> 的技术——手动或半自动描绘功能模块边界。van der Linden 等人 2024/2025 的论文展示了用深度学习自动化这一流程。</span></p></div>
+      </section>
+<section class="section">
+        <h2><span>*</span><span class="i18n-en">Key Findings</span><span class="i18n-zh">核心发现</span></h2>
+        <ol class="contribution-list">
+        <li>
+          <span class="badge"><span class="i18n-en">Finding 1</span><span class="i18n-zh">发现 1</span></span>
+          <strong><span class="i18n-en">Single-Image Planar Metrology Is Sufficient</span><span class="i18n-zh">单图像平面计量就够了</span></strong>
+          <span class="description"> — <span class="i18n-en">Die shots are orthographic projections of a flat surface. Full 3D photogrammetry or stereo reconstruction is unnecessary. The problem reduces to: (1) reference-based PPU calibration, (2) optional perspective/distortion correction via homography, and (3) polygon area computation in calibrated coordinates.</span><span class="i18n-zh">Die shot 是平面的正射投影，不需要完整三维重建或立体视觉。问题归结为：(1) 基于参考物的 PPU 标定，(2) 可选的透视/畸变校正（通过单应性矩阵），(3) 标定坐标系下的多边形面积计算。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Finding 2</span><span class="i18n-zh">发现 2</span></span>
+          <strong><span class="i18n-en">Reference-Based Scaling Is the Industry Standard</span><span class="i18n-zh">基于参考物缩放是行业标准</span></strong>
+          <span class="description"> — <span class="i18n-en">All practical die measurement approaches use a known reference dimension. Common references: (1) scale bars in microscopy images, (2) known package dimensions (e.g., QFP/BGA body size), (3) known die dimensions from datasheets, (4) bond pad pitch (typically 50-100um). The PyImageSearch 'pixels per metric' approach is the de facto standard for reference-based image measurement.</span><span class="i18n-zh">所有实际可用的 die 测量方案都使用已知参考尺寸。常见参考物：(1) 显微图中的标尺，(2) 已知封装尺寸（如 QFP/BGA 封装体尺寸），(3) 数据手册中的 die 尺寸，(4) 焊盘间距（通常 50-100μm）。PyImageSearch 的「pixels per metric」方法是基于参考物图像测量的事实标准。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Finding 3</span><span class="i18n-zh">发现 3</span></span>
+          <strong><span class="i18n-en">Sub-Pixel Edge Detection Dramatically Improves Accuracy</span><span class="i18n-zh">亚像素边缘检测大幅提升精度</span></strong>
+          <span class="description"> — <span class="i18n-en">Industrial metrology achieves 0.1-0.3 pixel accuracy using sub-pixel edge detection. Three major algorithm families: (1) Fitting-based (Gaussian/Erf function fitting along gradient direction), (2) Moment-based (Zernike moments, spatial moments), (3) Interpolation-based. The Canny-Zernike combination is widely used in industrial dimensional measurement. For die shots, where edges are typically high-contrast metal/silicon boundaries, fitting-based methods perform best.</span><span class="i18n-zh">工业计量通过亚像素边缘检测达到 0.1-0.3 像素的精度。三大算法族：(1) 拟合类（沿梯度方向做高斯/Erf 函数拟合），(2) 矩类（Zernike 矩、空间矩），(3) 插值类。Canny-Zernike 组合在工业尺寸测量中广泛使用。对于 die shot，由于边缘通常是高对比度的金属/硅边界，拟合类方法效果最好。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Finding 4</span><span class="i18n-zh">发现 4</span></span>
+          <strong><span class="i18n-en">Perspective Correction via Homography Is Essential for Angled Shots</span><span class="i18n-zh">透视校正对倾斜拍摄至关重要</span></strong>
+          <span class="description"> — <span class="i18n-en">Web-sourced die shots may not be perfectly orthographic. OpenCV's findHomography() + warpPerspective() can correct perspective distortion using 4+ coplanar reference points. For rectangular dies, the die boundary corners themselves serve as reference points for a projective-to-affine correction. When the viewing angle deviates &gt;5 degrees from normal, uncorrected measurements can have 2-5% systematic error.</span><span class="i18n-zh">网图 die shot 不一定是完美正射的。OpenCV 的 findHomography() + warpPerspective() 可以用 4 个以上共面参考点校正透视畸变。对于矩形 die，die 边界四角本身就可以作为投影-仿射校正的参考点。当视角偏离法线 &gt;5 度时，未校正的测量会有 2-5% 的系统误差。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Finding 5</span><span class="i18n-zh">发现 5</span></span>
+          <strong><span class="i18n-en">Deep Learning Is Automating Die-Polygon-Capturing</span><span class="i18n-zh">深度学习正在自动化 die-polygon 捕获</span></strong>
+          <span class="description"> — <span class="i18n-en">A 2024 paper (van der Linden et al., Expert Systems with Applications) demonstrated using U-Net CNNs for automated polygon extraction from die shots, achieving significant speedup over manual annotation. Nyako et al. (2024, IOP Science) applied U-Net to reverse engineering chip die layer segmentation. These approaches complement traditional edge detection for automated functional block identification and area measurement.</span><span class="i18n-zh">van der Linden 等人 2024 年的论文（Expert Systems with Applications）展示了用 U-Net CNN 自动从 die shot 提取多边形，比手动标注快了一个数量级。Nyako 等人（2024，IOP Science）将 U-Net 应用于芯片 die 层分割逆向工程。这些方法补充了传统边缘检测，可用于自动化功能模块识别和面积测量。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Finding 6</span><span class="i18n-zh">发现 6</span></span>
+          <strong><span class="i18n-en">Uncertainty Budget for Web Image Measurement Is Quantifiable</span><span class="i18n-zh">网图测量的不确定度预算可以量化</span></strong>
+          <span class="description"> — <span class="i18n-en">The total measurement uncertainty combines: (1) Pixel quantization: +/-0.5px (or +/-0.1px with sub-pixel detection), (2) Reference calibration uncertainty: depends on reference accuracy, (3) Lens distortion: radial/tangential, 1-3% for uncalibrated consumer cameras, (4) Perspective foreshortening: 0-5% depending on viewing angle, (5) JPEG compression artifacts: +/-0.5-1px for lossy compressed images, (6) Image stitching errors: 1-5px at seam boundaries. For a typical high-quality die shot at 1000px die width, the expected measurement uncertainty is 1-3% without calibration, and &lt;1% with proper reference scaling.</span><span class="i18n-zh">总测量不确定度由以下因素组合：(1) 像素量化：±0.5px（亚像素检测可达 ±0.1px），(2) 参考标定不确定度：取决于参考物精度，(3) 镜头畸变：径向/切向，未标定消费级相机 1-3%，(4) 透视缩短：0-5% 取决于视角，(5) JPEG 压缩伪影：有损压缩图像 ±0.5-1px，(6) 图像拼接误差：拼接缝处 1-5px。对于典型的高质量 die shot（die 宽度 1000px），预期测量不确定度在无标定时 1-3%，有恰当参考缩放时 &lt;1%。</span></span>
+        </li>
+      </ol>
+      </section>
+<section class="section">
+        <h2><span>*</span><span class="i18n-en">Measurement Pipeline Architecture</span><span class="i18n-zh">测量流水线架构</span></h2>
+        <div class="method-overview">
+        <div class="method-step">
+          <div class="number">1</div>
+          <div class="content">
+            <strong><span class="i18n-en">Image Acquisition &amp; Preprocessing</span><span class="i18n-zh">图像获取与预处理</span></strong>
+            <p><span class="i18n-en">Load web-sourced die shot. Assess image quality (resolution, compression, lighting uniformity). Optionally denoise using bilateral filter or non-local means to preserve edges while reducing JPEG artifacts.</span><span class="i18n-zh">加载网图 die shot。评估图像质量（分辨率、压缩、光照均匀性）。可选使用双边滤波或非局部均值去噪，在去除 JPEG 伪影的同时保留边缘。</span></p>
+          </div>
+        </div><div class="method-step">
+          <div class="number">2</div>
+          <div class="content">
+            <strong><span class="i18n-en">Reference Identification &amp; PPU Calibration</span><span class="i18n-zh">参考物识别与 PPU 标定</span></strong>
+            <p><span class="i18n-en">Identify a reference object with known physical dimension: scale bar, package outline, bond pad pitch, or known die feature. Measure reference in pixels. Compute PPU (pixels per unit) = pixel_distance / known_physical_distance. For rectangular references, use Monte Carlo sampling on reference edge detection to quantify PPU uncertainty.</span><span class="i18n-zh">识别具有已知物理尺寸的参考物：标尺、封装轮廓、焊盘间距或已知 die 特征。以像素为单位测量参考物。计算 PPU = 像素距离 / 已知物理距离。对于矩形参考物，用蒙特卡洛采样参考边缘检测来量化 PPU 不确定度。</span></p>
+          </div>
+        </div><div class="method-step">
+          <div class="number">3</div>
+          <div class="content">
+            <strong><span class="i18n-en">Perspective &amp; Distortion Correction</span><span class="i18n-zh">透视与畸变校正</span></strong>
+            <p><span class="i18n-en">If the die shot shows visible perspective distortion (non-rectangular die appearing as trapezoid), apply homography correction: identify 4 die corner points, compute H = findHomography(src_pts, dst_pts), warp image. For barrel/pincushion distortion from uncalibrated cameras, estimate distortion coefficients from straight-line features (die edges should be straight).</span><span class="i18n-zh">如果 die shot 有明显透视畸变（矩形 die 呈梯形），应用单应性校正：识别 4 个 die 角点，计算 H = findHomography(src_pts, dst_pts)，变换图像。对于未标定相机的桶形/枕形畸变，从直线特征（die 边缘应为直线）估计畸变系数。</span></p>
+          </div>
+        </div><div class="method-step">
+          <div class="number">4</div>
+          <div class="content">
+            <strong><span class="i18n-en">Edge Detection &amp; Feature Extraction</span><span class="i18n-zh">边缘检测与特征提取</span></strong>
+            <p><span class="i18n-en">Apply Canny edge detection to identify die boundary. Refine to sub-pixel accuracy using: (a) Gaussian/Erf fitting along gradient normals (0.1px accuracy), (b) Zernike moment method (orientation-invariant), or (c) parabolic fitting of gradient magnitude peaks. Extract die boundary as an ordered polygon. For complex die shapes (non-rectangular), use contour detection + polygon approximation.</span><span class="i18n-zh">用 Canny 边缘检测识别 die 边界。通过以下方法细化到亚像素精度：(a) 沿梯度法线的高斯/Erf 拟合（0.1px 精度），(b) Zernike 矩方法（旋转不变），(c) 梯度幅值峰值的抛物线拟合。将 die 边界提取为有序多边形。对于复杂 die 形状（非矩形），使用轮廓检测 + 多边形逼近。</span></p>
+          </div>
+        </div><div class="method-step">
+          <div class="number">5</div>
+          <div class="content">
+            <strong><span class="i18n-en">Dimensional Measurement</span><span class="i18n-zh">尺寸测量</span></strong>
+            <p><span class="i18n-en">Compute die dimensions from the calibrated polygon: width, height, area, and perimeter. For rectangular dies: fit minimum bounding rectangle. For arbitrary polygons: use Shoelace formula for area. Convert from pixels to physical units using PPU factor. Report both the measurement and its uncertainty interval.</span><span class="i18n-zh">从标定后的多边形计算 die 尺寸：宽度、高度、面积、周长。对于矩形 die：拟合最小外接矩形。对于任意多边形：用鞋带公式计算面积。使用 PPU 因子从像素转换为物理单位。同时报告测量值和不确定度区间。</span></p>
+          </div>
+        </div><div class="method-step">
+          <div class="number">6</div>
+          <div class="content">
+            <strong><span class="i18n-en">Uncertainty Quantification</span><span class="i18n-zh">不确定度量化</span></strong>
+            <p><span class="i18n-en">Propagate uncertainties through the measurement chain using GUM (Guide to the expression of Uncertainty in Measurement) or Monte Carlo methods. Key uncertainty contributors: PPU calibration (reference dimension accuracy + edge detection noise), perspective correction residuals, edge localization precision, and image resolution. Report combined standard uncertainty and expanded uncertainty (k=2, 95% confidence).</span><span class="i18n-zh">使用 GUM（测量不确定度表述指南）或蒙特卡洛方法在测量链中传播不确定度。关键不确定度来源：PPU 标定（参考尺寸精度 + 边缘检测噪声）、透视校正残差、边缘定位精度、图像分辨率。报告合成标准不确定度和扩展不确定度（k=2，95% 置信度）。</span></p>
+          </div>
+        </div>
+      </div>
+      </section>
+<section class="section">
+        <h2><span>*</span><span class="i18n-en">Sub-Pixel Edge Detection Techniques</span><span class="i18n-zh">亚像素边缘检测技术</span></h2>
+        <div class="table-wrapper striped">
+        
+        <table>
+          <thead>
+            <tr>
+              <th><span class="i18n-en">Method</span><span class="i18n-zh">方法</span></th><th><span class="i18n-en">Accuracy (px)</span><span class="i18n-zh">精度 (px)</span></th><th><span class="i18n-en">Principle</span><span class="i18n-zh">原理</span></th><th><span class="i18n-en">Pros</span><span class="i18n-zh">优点</span></th><th><span class="i18n-en">Cons</span><span class="i18n-zh">缺点</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>Gaussian Fitting / 高斯拟合</td><td>0.05-0.1</td><td>Fit Gaussian to gradient profile / 梯度剖面拟合高斯</td><td>Highest accuracy, noise robust / 精度最高、抗噪好</td><td>Slow, assumes Gaussian edge model / 慢、假设高斯边缘模型</td>
+              </tr>
+            
+              <tr>
+                <td>Erf Function Fitting / Erf 函数拟合</td><td>0.05-0.15</td><td>Fit erf() to intensity profile / 强度剖面拟合 erf()</td><td>Matches optical edge physics / 符合光学边缘物理</td><td>Requires good initial estimate / 需要好的初始估计</td>
+              </tr>
+            
+              <tr>
+                <td>Zernike Moments / Zernike 矩</td><td>0.1-0.2</td><td>Orthogonal moment on 5x5 mask / 5x5 窗口正交矩</td><td>Rotation invariant, fast / 旋转不变、快</td><td>Less accurate than fitting / 不如拟合精确</td>
+              </tr>
+            
+              <tr>
+                <td>Parabolic Interpolation / 抛物线插值</td><td>0.1-0.3</td><td>Parabola through 3 gradient peaks / 3 个梯度峰做抛物线</td><td>Very fast, simple / 很快、简单</td><td>Orientation sensitive / 对方向敏感</td>
+              </tr>
+            
+              <tr>
+                <td>Spatial Moments / 空间矩</td><td>0.2-0.5</td><td>Gray-level spatial moments / 灰度空间矩</td><td>Good for general edges / 通用边缘适用</td><td>Lower accuracy / 精度较低</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+<div class="prose"><p><span class="i18n-en"><strong>Recommendation for die shots:</strong> The <strong>Gaussian/Erf fitting</strong> approach is best suited for die boundary measurement because:
+1. Die edges are high-contrast metal-silicon or scribe-line boundaries with well-defined profiles
+2. The edge spread function (ESF) of optical microscope images closely matches the erf() model
+3. Accuracy of 0.05-0.1 px is achievable, translating to sub-micrometer precision for typical die shots
+4. Robust to JPEG compression artifacts when combined with gradient-direction fitting</p><p>The Canny + Zernike pipeline (Huang et al. 2020, cited 52 times) is a proven industrial approach: use Canny for initial pixel-level edge detection, then refine with Zernike moments for sub-pixel positions. The improved Canny-Zernike algorithm (2022, Wiley) added Otsu thresholding and improved Hough transform for measurement of machined workpieces.</span><span class="i18n-zh"><strong>针对 die shot 的建议：</strong> <strong>高斯/Erf 拟合</strong>方法最适合 die 边界测量，原因如下：
+1. Die 边缘是高对比度的金属-硅或切割线边界，轮廓明确
+2. 光学显微图像的边缘扩展函数（ESF）与 erf() 模型高度吻合
+3. 可达 0.05-0.1px 精度，对应典型 die shot 的亚微米精度
+4. 结合梯度方向拟合，对 JPEG 压缩伪影具有鲁棒性</p><p>Canny + Zernike 流水线（Huang 等人 2020，被引 52 次）是经过验证的工业方案：用 Canny 做初始像素级边缘检测，再用 Zernike 矩细化到亚像素位置。改进的 Canny-Zernike 算法（2022，Wiley）增加了 Otsu 阈值和改进的 Hough 变换，用于机加工工件的测量。</span></p></div>
+      </section>
+<section class="section">
+        <h2><span>*</span><span class="i18n-en">Calibration Approaches for Web Images</span><span class="i18n-zh">网图标定方案</span></h2>
+        <div class="prose"><p><span class="i18n-en"><h4>The Fundamental Challenge</h4></p><p>Web-sourced die shots lack EXIF metadata, camera intrinsics, and physical scale information. Three calibration strategies address this:</p><p><h4>Strategy 1: Known Reference Object (Recommended)</h4></p><p>Use a visible reference with known physical dimensions:
+<ul><li><strong>Scale bar</strong> in the image (common in professional die shots from TechInsights, ChipWise)</li>
+<li><strong>Package outline</strong> with known dimensions from the datasheet</li>
+<li><strong>Bond pad pitch</strong> (industry standard: 50-100μm, sometimes specified in die documentation)</li>
+<li><strong>Known sub-die feature</strong> (e.g., SRAM bit-cell area at a given process node)</p><p>The PPU factor: <code>pixels_per_mm = measured_reference_px / known_reference_mm</code></p><p><h4>Strategy 2: Homography from Known Geometry</h4></p><p>When the die shape is known (rectangular with known aspect ratio):</li>
+1. Detect die corners (4 points minimum)
+2. Compute homography H mapping image corners to a rectified rectangle
+3. If one dimension is known, derive PPU from the rectified image
+4. OpenCV: <code>H, _ = cv2.findHomography(img_pts, world_pts)</code> then <code>cv2.warpPerspective()</code></p><p>This simultaneously corrects perspective distortion and establishes scale.</p><p><h4>Strategy 3: Cross-Referencing Known Die Sizes</h4></p><p>For well-known chips, die sizes are often published:
+<li>SemiAnalysis die yield calculator database</li>
+<li>TechInsights teardown reports</li>
+<li>WikiChip die area entries</li>
+<li>Academic papers and manufacturer presentations</p><p>Use the published die area as a consistency check even if not as primary calibration.</p><p><h4>Distortion Handling</h4></p><p>For images from consumer cameras (not microscopes):</li>
+<li><strong>Barrel distortion</strong> is the dominant aberration (straight lines appear curved)</li>
+<li>Estimate from die edges: if die edges appear curved, fit a radial distortion model</li>
+<li>OpenCV's <code>cv2.calibrateCamera()</code> can work with a single image if enough straight lines are visible</li>
+<li>For microscopy images, distortion is typically negligible (&lt;0.1%)</li></ul></span><span class="i18n-zh"><h4>根本挑战</h4></p><p>网图 die shot 缺少 EXIF 元数据、相机内参和物理尺度信息。三种标定策略可以解决这个问题：</p><p><h4>策略 1：已知参考物（推荐）</h4></p><p>使用图中可见的、物理尺寸已知的参考物：
+<ul><li>图中的<strong>标尺</strong>（TechInsights、ChipWise 等专业 die shot 常见）</li>
+<li>数据手册中有已知尺寸的<strong>封装轮廓</strong></li>
+<li><strong>焊盘间距</strong>（行业标准：50-100μm，有时在 die 文档中注明）</li>
+<li><strong>已知子 die 特征</strong>（如特定工艺节点的 SRAM bit-cell 面积）</p><p>PPU 因子：<code>pixels_per_mm = 参考物像素测量值 / 参考物已知毫米值</code></p><p><h4>策略 2：基于已知几何的单应性</h4></p><p>当 die 形状已知（已知长宽比的矩形）时：</li>
+1. 检测 die 角点（至少 4 个点）
+2. 计算将图像角点映射到矫正矩形的单应性 H
+3. 如果已知一个维度，从矫正图像推导 PPU
+4. OpenCV：<code>H, _ = cv2.findHomography(img_pts, world_pts)</code> 然后 <code>cv2.warpPerspective()</code></p><p>这同时校正了透视畸变并建立了尺度。</p><p><h4>策略 3：交叉验证已知 Die 尺寸</h4></p><p>对于知名芯片，die 尺寸通常已被公开：
+<li>SemiAnalysis die yield 计算器数据库</li>
+<li>TechInsights 拆解报告</li>
+<li>WikiChip die 面积条目</li>
+<li>学术论文和厂商演示文稿</p><p>即使不作为主标定，也可用已发布的 die 面积做一致性校验。</p><p><h4>畸变处理</h4></p><p>对于消费级相机图片（非显微镜）：</li>
+<li><strong>桶形畸变</strong>是主要像差（直线看起来弯曲）</li>
+<li>从 die 边缘估计：如果 die 边缘弯曲，拟合径向畸变模型</li>
+<li>OpenCV 的 <code>cv2.calibrateCamera()</code> 在有足够可见直线时可以用单张图像工作</li>
+<li>显微镜图像的畸变通常可忽略（&lt;0.1%）</li></ul></span></p></div>
+      </section>
+<section class="section">
+        <h2><span>&lt;/&gt;</span><span class="i18n-en">Open-Source Tools &amp; Libraries</span><span class="i18n-zh">开源工具与库</span></h2>
+        <div class="table-wrapper striped">
+        
+        <table>
+          <thead>
+            <tr>
+              <th><span class="i18n-en">Tool / Library</span><span class="i18n-zh">工具/库</span></th><th><span class="i18n-en">Role</span><span class="i18n-zh">用途</span></th><th><span class="i18n-en">Key Features</span><span class="i18n-zh">关键特性</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>OpenCV (Python)</td><td>Core image processing / 核心图像处理</td><td>Canny, findContours, findHomography, warpPerspective, calibrateCamera, minAreaRect / Canny、轮廓检测、单应性、透视变换、标定、最小外接矩形</td>
+              </tr>
+            
+              <tr>
+                <td>scikit-image</td><td>Advanced edge detection / 高级边缘检测</td><td>Subpixel edge detection (Devernay), active contours, morphology, measure.regionprops / 亚像素边缘（Devernay）、活动轮廓、形态学、区域属性</td>
+              </tr>
+            
+              <tr>
+                <td>NumPy / SciPy</td><td>Numerical computation / 数值计算</td><td>curve_fit for Gaussian/Erf edge fitting, spatial.KDTree for edge snapping, linalg for homography / 高斯/Erf 拟合、KD-Tree 边缘吸附、单应性线性代数</td>
+              </tr>
+            
+              <tr>
+                <td>ImageJ / Fiji</td><td>Interactive measurement / 交互式测量</td><td>Scale bar calibration, manual ROI measurement, Ridge Detection plugin for sub-pixel edges / 标尺标定、手动 ROI 测量、Ridge Detection 插件做亚像素边缘</td>
+              </tr>
+            
+              <tr>
+                <td>Hugin</td><td>Image stitching / 图像拼接</td><td>Panorama stitching with lens distortion correction, useful for stitched die shot composites / 带镜头畸变校正的全景拼接，适用于拼接 die shot</td>
+              </tr>
+            
+              <tr>
+                <td>PyTorch / TensorFlow</td><td>Deep learning segmentation / 深度学习分割</td><td>U-Net for die polygon segmentation, semantic segmentation of functional blocks / U-Net 做 die 多边形分割、功能模块语义分割</td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+      </section>
+<section class="section">
+        <h2><span>||</span><span class="i18n-en">Uncertainty Analysis Framework</span><span class="i18n-zh">不确定度分析框架</span></h2>
+        <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr)">
+        <div class="metric">
+          
+          <div class="value">
+            0.5<span class="suffix">px</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">Pixel Quantization</span><span class="i18n-zh">像素量化</span></div>
+        </div><div class="metric">
+          
+          <div class="value">
+            0.05-0.1<span class="suffix">px</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">Sub-pixel Edge</span><span class="i18n-zh">亚像素边缘</span></div>
+        </div><div class="metric">
+          
+          <div class="value">
+            0.5-1<span class="suffix">px</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">JPEG Artifacts</span><span class="i18n-zh">JPEG 伪影</span></div>
+        </div><div class="metric">
+          
+          <div class="value">
+            0-5<span class="suffix">%</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">Perspective Error</span><span class="i18n-zh">透视误差</span></div>
+        </div><div class="metric">
+          
+          <div class="value">
+            1-3<span class="suffix">%</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">Lens Distortion</span><span class="i18n-zh">镜头畸变</span></div>
+        </div><div class="metric">
+          
+          <div class="value">
+            <1<span class="suffix">%</span>
+            
+            
+          </div>
+          <div class="label"><span class="i18n-en">Calibrated Total</span><span class="i18n-zh">标定后总误差</span></div>
+        </div>
+      </div>
+<div class="prose"><p><span class="i18n-en"><h4>Error Budget for Die Shot Measurement</h4></p><p>Following the GUM (Guide to the Expression of Uncertainty in Measurement, ISO/IEC 98-3) framework:</p><p><strong>Type A uncertainties</strong> (statistical evaluation):
+<ul><li>Edge detection repeatability: measured by running edge detection N times with slight parameter variations</li>
+<li>PPU calibration spread: measured by sampling multiple reference points</p><p><strong>Type B uncertainties</strong> (non-statistical evaluation):</li>
+<li>Reference dimension accuracy: from datasheet tolerance or scale bar graduation</li>
+<li>Pixel quantization: rectangular distribution, u = 0.5px / sqrt(3) = 0.29px</li>
+<li>JPEG compression: depends on quality factor, typically 0.5-1px for Q&gt;80</li>
+<li>Lens distortion: estimated from die edge straightness analysis</li>
+<li>Perspective foreshortening: estimated from die corner angle analysis</p><p><strong>Combined standard uncertainty:</strong></li></ul>
+<code>u_c = sqrt(u_edge^2 + u_ppu^2 + u_distortion^2 + u_perspective^2 + u_jpeg^2)</code></p><p><strong>Monte Carlo approach</strong> (as implemented in diemeter's calibration module):
+1. Sample edge positions from their uncertainty distributions
+2. Sample PPU from calibration uncertainty
+3. Compute measurement N times (N=1000+)
+4. Report mean +/- 2*std as 95% confidence interval</p><p><strong>Practical guidance:</strong> For a 1000px-wide die shot with a good reference, expect ~1% relative uncertainty (~100μm for a 10mm die). Sub-pixel edge detection reduces this to ~0.3% (~30μm).</span><span class="i18n-zh"><h4>Die Shot 测量的误差预算</h4></p><p>遵循 GUM（测量不确定度表述指南，ISO/IEC 98-3）框架：</p><p><strong>A 类不确定度</strong>（统计评估）：
+<ul><li>边缘检测重复性：通过微调参数运行 N 次边缘检测来测量</li>
+<li>PPU 标定分散度：通过采样多个参考点来测量</p><p><strong>B 类不确定度</strong>（非统计评估）：</li>
+<li>参考尺寸精度：来自数据手册公差或标尺刻度</li>
+<li>像素量化：矩形分布，u = 0.5px / sqrt(3) = 0.29px</li>
+<li>JPEG 压缩：取决于质量因子，Q&gt;80 时通常 0.5-1px</li>
+<li>镜头畸变：从 die 边缘直线度分析估计</li>
+<li>透视缩短：从 die 角点角度分析估计</p><p><strong>合成标准不确定度：</strong></li></ul>
+<code>u_c = sqrt(u_edge^2 + u_ppu^2 + u_distortion^2 + u_perspective^2 + u_jpeg^2)</code></p><p><strong>蒙特卡洛方法</strong>（如 diemeter 标定模块的实现）：
+1. 从不确定度分布中采样边缘位置
+2. 从标定不确定度中采样 PPU
+3. 计算 N 次测量（N=1000+）
+4. 报告均值 ± 2*std 作为 95% 置信区间</p><p><strong>实用指南：</strong> 对于 1000px 宽的 die shot 配合好的参考物，预期约 1% 相对不确定度（10mm die 约 100μm）。亚像素边缘检测可将其降至约 0.3%（约 30μm）。</span></p></div>
+      </section>
+<section class="section">
+        <h2><span>i</span><span class="i18n-en">Industry Practices &amp; Players</span><span class="i18n-zh">行业实践与关键参与者</span></h2>
+        <div class="prose"><p><span class="i18n-en"><h4>Professional Die Analysis Ecosystem</h4></p><p><strong>TechInsights</strong> (formerly Chipworks) — The industry leader in semiconductor reverse engineering. Uses professional-grade metallurgical microscopes, SEM, and proprietary analysis tools. Die shot analysis is part of their comprehensive teardown service. Their die area measurements are considered authoritative reference values.</p><p><strong>ChipWise</strong> (NanoPhysics B.V., Netherlands) — Specializes in die shot analysis. Their workflow: (1) teardown, (2) mechanical grinding + chemical etching to extract die, (3) high-magnification optical microscopy for front-side die shot, (4) bulk silicon removal for back-side imaging. They offer both front-side and back-side die shots with deep zoom capability.</p><p><strong>SemiAnalysis</strong> — Provides die yield calculators and die size databases. Their die shot analyses (e.g., Meteor Lake die shot and architecture analysis) combine published dimensions with detailed functional block annotation.</p><p><h4>Community &amp; Hobbyist Practices</h4></p><p><strong>Zeptobars</strong> — Community-driven die shot repository since 2012. Uses affordable microscopy setups ($500 level) with chemical decapping.</p><p><strong>Siliconpr0n</strong> — Collaborative wiki archive for die images and reverse engineering.</p><p><strong>Ken Shirriff / righto.com</strong> — Detailed die photography and analysis tutorials, including image stitching techniques for high-resolution composites.</p><p><h4>Die-Polygon-Capturing Technique</h4></p><p>The core methodology used by the industry for die area estimation:
+1. Obtain high-resolution die shot (typically stitched from multiple microscopy frames)
+2. Identify the die boundary (scribe line or passivation edge)
+3. Trace functional block polygons (CPU cores, GPU, memory, I/O, etc.)
+4. Calibrate using known dimension (scale bar or published die size)
+5. Compute areas per block and total die area</p><p>This has been the manual gold standard. van der Linden et al. (2025) demonstrated automated polygon extraction using U-Net deep learning, citing 53 references and 9 citations within one year — indicating strong industry interest in automation.</span><span class="i18n-zh"><h4>专业 Die 分析生态</h4></p><p><strong>TechInsights</strong>（前身 Chipworks）—— 半导体逆向工程行业领导者。使用专业级金相显微镜、SEM 和专有分析工具。Die shot 分析是其完整拆解服务的一部分。他们的 die 面积测量被视为权威参考值。</p><p><strong>ChipWise</strong>（NanoPhysics B.V.，荷兰）—— 专门做 die shot 分析。工作流：(1) 拆解，(2) 机械研磨 + 化学刻蚀提取 die，(3) 高倍光学显微镜拍正面 die shot，(4) 去除体硅拍背面。提供正面和背面 die shot，支持深度缩放。</p><p><strong>SemiAnalysis</strong> —— 提供 die yield 计算器和 die 尺寸数据库。其 die shot 分析（如 Meteor Lake die shot 和架构分析）结合公开尺寸与详细功能模块标注。</p><p><h4>社区与爱好者实践</h4></p><p><strong>Zeptobars</strong> —— 自 2012 年的社区驱动 die shot 仓库。使用入门级显微设备（500 美元级别）配合化学去封。</p><p><strong>Siliconpr0n</strong> —— 协作式 die 图像和逆向工程 wiki 档案。</p><p><strong>Ken Shirriff / righto.com</strong> —— 详细的 die 摄影和分析教程，包括高分辨率合成的图像拼接技术。</p><p><h4>Die-Polygon-Capturing 技术</h4></p><p>行业用于 die 面积估算的核心方法：
+1. 获取高分辨率 die shot（通常由多帧显微图像拼接而成）
+2. 识别 die 边界（切割线或钝化层边缘）
+3. 描绘功能模块多边形（CPU 核心、GPU、内存、I/O 等）
+4. 用已知尺寸标定（标尺或已公开的 die 尺寸）
+5. 计算各模块面积和总 die 面积</p><p>这一直是手动的黄金标准。van der Linden 等人（2025）展示了用 U-Net 深度学习自动提取多边形，引用 53 篇参考文献，一年内被引 9 次——说明行业对自动化有强烈需求。</span></p></div>
+      </section>
+<section class="section">
+        <h2><span>*</span><span class="i18n-en">Recommendations for Diemeter Project</span><span class="i18n-zh">对 Diemeter 项目的建议</span></h2>
+        <ol class="contribution-list">
+        <li>
+          <span class="badge"><span class="i18n-en">Priority 1</span><span class="i18n-zh">优先级 1</span></span>
+          <strong><span class="i18n-en">Implement Multi-Reference PPU Calibration</span><span class="i18n-zh">实现多参考物 PPU 标定</span></strong>
+          <span class="description"> — <span class="i18n-en">Support multiple calibration reference types: user-drawn scale bars, rectangular package outlines (4-point homography + known dimensions), bond pad pitch detection, and manual known-dimension input. Average PPU from multiple references to improve accuracy. The Monte Carlo PPU uncertainty already in the codebase is excellent — extend it to support all reference types.</span><span class="i18n-zh">支持多种标定参考类型：用户绘制标尺、矩形封装轮廓（4 点单应性 + 已知尺寸）、焊盘间距检测、手动输入已知尺寸。从多个参考物平均 PPU 以提高精度。代码中已有的蒙特卡洛 PPU 不确定度做得很好——扩展到支持所有参考类型。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Priority 2</span><span class="i18n-zh">优先级 2</span></span>
+          <strong><span class="i18n-en">Add Perspective Correction Module</span><span class="i18n-zh">增加透视校正模块</span></strong>
+          <span class="description"> — <span class="i18n-en">Implement automatic or semi-automatic perspective correction for tilted die shots: detect die corners (existing polygon + minAreaRect), compute expected aspect ratio from known die dimensions or user input, apply homography correction before measurement. This addresses the #1 source of systematic error in web-sourced images.</span><span class="i18n-zh">对倾斜 die shot 实现自动或半自动透视校正：检测 die 角点（已有多边形 + minAreaRect），从已知 die 尺寸或用户输入计算预期长宽比，测量前应用单应性校正。这解决了网图测量的首要系统误差来源。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Priority 3</span><span class="i18n-zh">优先级 3</span></span>
+          <strong><span class="i18n-en">Upgrade to Sub-Pixel Edge Detection</span><span class="i18n-zh">升级到亚像素边缘检测</span></strong>
+          <span class="description"> — <span class="i18n-en">The existing KD-tree edge snapping is a good foundation. Add Gaussian/Erf fitting along gradient normals at each edge point for 0.1px sub-pixel refinement. This is a 5-10x improvement in edge localization accuracy with minimal computational overhead. The Canny-Zernike approach is also viable for a faster but slightly less accurate alternative.</span><span class="i18n-zh">现有的 KD-tree 边缘吸附是很好的基础。在每个边缘点沿梯度法线添加高斯/Erf 拟合，实现 0.1px 亚像素细化。这在边缘定位精度上有 5-10 倍提升，计算开销很小。Canny-Zernike 方法也可行，速度更快但精度略低。</span></span>
+        </li><li>
+          <span class="badge"><span class="i18n-en">Priority 4</span><span class="i18n-zh">优先级 4</span></span>
+          <strong><span class="i18n-en">Build Known-Die-Size Database</span><span class="i18n-zh">建立已知 Die 尺寸数据库</span></strong>
+          <span class="description"> — <span class="i18n-en">Create a lightweight database of known die dimensions from public sources (WikiChip, SemiAnalysis, manufacturer specs). Use for: (1) auto-suggesting calibration references, (2) cross-validating user measurements, (3) bootstrapping PPU when no other reference is available. Even a small database of popular chips (Apple A-series, Qualcomm Snapdragon, Intel Core, AMD Zen) would be valuable.</span><span class="i18n-zh">从公开来源（WikiChip、SemiAnalysis、厂商规格）创建轻量级已知 die 尺寸数据库。用于：(1) 自动建议标定参考，(2) 交叉验证用户测量，(3) 无其他参考时引导 PPU。即使只是热门芯片（Apple A 系列、高通骁龙、Intel Core、AMD Zen）的小型数据库也很有价值。</span></span>
+        </li>
+      </ol>
+      </section>
+<section class="section">
+        <h2><span>-></span><span class="i18n-en">Sources</span><span class="i18n-zh">信息来源</span></h2>
+        <div class="link-group">
+        <a href="https://grokipedia.com/page/Die_shot" class="link-button" target="_blank" rel="noopener">
+          Grokipedia: Die Shot - Comprehensive overview of die photography
+        </a><a href="https://pyimagesearch.com/2016/03/28/measuring-size-of-objects-in-an-image-with-opencv/" class="link-button" target="_blank" rel="noopener">
+          PyImageSearch: Measuring Size of Objects with OpenCV (pixels per metric)
+        </a><a href="https://docs.opencv.org/4.x/d9/dab/tutorial_homography.html" class="link-button" target="_blank" rel="noopener">
+          OpenCV: Homography Tutorial - Perspective correction &amp; planar measurement
+        </a><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6605074/" class="link-button" target="_blank" rel="noopener">
+          Orji et al. (2018): Metrology for the Next Generation of Semiconductor Devices - Nature Electronics
+        </a><a href="https://www.sciencedirect.com/science/article/pii/S0957417424023467" class="link-button" target="_blank" rel="noopener">
+          van der Linden et al. (2025): Automating die-polygon-capturing with deep learning
+        </a><a href="https://iopscience.iop.org/article/10.1088/1742-6596/2024" class="link-button" target="_blank" rel="noopener">
+          Nyako et al. (2024): Reverse Engineering Chip Die Using U-Net CNNs
+        </a><a href="https://www.worldscientific.com/doi/abs/10.1142/S0218001420520126" class="link-button" target="_blank" rel="noopener">
+          Huang et al. (2020): Sub-Pixel Edge Detection Based on Canny-Zernike Moments
+        </a><a href="https://onlinelibrary.wiley.com/doi/10.1002/cplx.22009" class="link-button" target="_blank" rel="noopener">
+          Improved Canny-Zernike Subpixel Detection Algorithm (2022)
+        </a><a href="https://chipwise.tech/chip-die-shot" class="link-button" target="_blank" rel="noopener">
+          ChipWise: Professional Die Shot Analysis Service
+        </a><a href="https://semianalysis.com/die-yield-calculator" class="link-button" target="_blank" rel="noopener">
+          SemiAnalysis: Die Yield Calculator
+        </a><a href="https://www.researchgate.net/publication/220201710" class="link-button" target="_blank" rel="noopener">
+          Reference-Free Machine Vision Inspection of Semiconductor Die
+        </a><a href="https://thedesignersassistant.com/2015/04/09/3-methods-of-scaling-from-photographs/" class="link-button" target="_blank" rel="noopener">
+          3 Methods of Scaling From Photographs (practical reference-based scaling)
+        </a><a href="https://www.righto.com/2015/12/creating-high-resolution-integrated.html" class="link-button" target="_blank" rel="noopener">
+          Ken Shirriff: Creating High-Resolution IC Die Photos
+        </a><a href="https://academic.oup.com/mam/article-abstract/25/5/1049/6833735" class="link-button" target="_blank" rel="noopener">
+          Arat et al. (2019): Estimating Step Heights from Top-Down SEM Images
+        </a>
+      </div>
+      </section>
+<footer class="brand-footer">
+        <p><span class="i18n-en">This report was generated by AI using web sources. Verify critical information independently.</span><span class="i18n-zh">本报告由 AI 基于网络来源生成，请独立验证关键信息。</span></p>
+        <p><strong>Powered by Actionbook</strong> | Generated: 2026-02-16T10:30:00Z</p>
+      </footer>
+  </article>
+  <a class="corner-powered" href="https://actionbook.dev" target="_blank" rel="noopener noreferrer">
+    <span>Powered by</span>
+    <strong>Actionbook</strong>
+  </a>
+</body>
+</html>
